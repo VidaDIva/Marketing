@@ -1,0 +1,73 @@
+---
+import { dayOffset, formatDate } from '../lib/helpers';
+
+interface GanttItem {
+  id: number;
+  nombre: string;
+  objetivoId: number;
+  fechaInicio: string;
+  fechaFinal: string;
+  estado: string;
+  avance: number;
+}
+
+interface Props {
+  items: GanttItem[];
+  inicio: string;
+  fin: string;
+  etiquetaInicio?: string;
+  etiquetaFin?: string;
+}
+
+const { items, inicio, fin, etiquetaInicio = 'Inicio del módulo', etiquetaFin = 'Fin del módulo' } = Astro.props as Props;
+const span = dayOffset(inicio, fin);
+
+const rows = items.map((it) => {
+  const startOff = Math.max(0, dayOffset(inicio, it.fechaInicio));
+  const endOff = Math.min(span, dayOffset(inicio, it.fechaFinal));
+  const left = (startOff / span) * 100;
+  const width = Math.max(((endOff - startOff) / span) * 100, 2.5);
+  return { ...it, left, width };
+});
+
+const gridlines: number[] = [];
+for (let d = 0; d <= span; d += 6) gridlines.push((d / span) * 100);
+
+const sepSept = dayOffset(inicio, '2026-09-01');
+const pctAgosto = (sepSept / span) * 100;
+const barClass = (estado: string): string => `bar-${estado.split(' ')[0]}`;
+---
+<div class="card">
+  <div class="gantt" aria-label="Cronograma en formato Gantt">
+    <div class="gantt-scale">
+      <div class="gantt-label-head">Actividad</div>
+      <div class="gantt-scale-track">
+        <span style={`width:${pctAgosto}%`}>Agosto · {etiquetaInicio}</span>
+        <span style={`width:${100 - pctAgosto}%`}>Septiembre · {etiquetaFin}</span>
+      </div>
+    </div>
+    {rows.map((r) => (
+      <div class="gantt-row">
+        <div class="gantt-label">
+          <span class="gantt-id">O{r.objetivoId}</span>
+          <span>
+            <span class="gantt-label-name">{r.nombre}</span>
+            <span class="gantt-label-date">{formatDate(r.fechaInicio)} → {formatDate(r.fechaFinal)}</span>
+          </span>
+        </div>
+        <div class="gantt-track">
+          {gridlines.map((g) => (
+            <span class="gantt-gridline" style={`left:${g}%`}></span>
+          ))}
+          <div
+            class={`gantt-bar ${barClass(r.estado)}`}
+            style={`left:${r.left}%;width:${r.width}%`}
+            title={`${r.nombre} · ${formatDate(r.fechaInicio)} → ${formatDate(r.fechaFinal)} · ${r.estado} · Avance ${r.avance}%`}
+          >
+            {r.avance > 0 ? `${r.avance}%` : ''}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>

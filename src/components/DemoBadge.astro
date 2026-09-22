@@ -1,0 +1,9 @@
+---
+interface Props {
+  text?: string;
+  tip?: string;
+}
+
+const { text = 'Demo', tip = 'Dato de demostración. No corresponde a datos reales del proyecto.' } = Astro.props;
+---
+<span class="badge badge--demo" title={tip}>{text}</span>

@@ -1,0 +1,54 @@
+---
+import type { Actividad } from '../data/types';
+import { formatDate, formatMoney, getObjetivo } from '../lib/helpers';
+import DataTable from './DataTable.astro';
+
+interface Props {
+  rows: Actividad[];
+  searchable?: boolean;
+}
+
+const { rows, searchable = true } = Astro.props as Props;
+
+const estadoOpciones = ['No iniciada', 'En proceso', 'Completada', 'Retrasada'];
+const responsables = [...new Set(rows.map((a) => a.responsable))];
+const objetivosDelSet = [...new Set(rows.map((a) => a.objetivoId))];
+
+const tableRows = rows.map((a) => {
+  const objetivo = getObjetivo(a.objetivoId);
+  return {
+    id: `A${String(a.id).padStart(2, '0')}`,
+    nombre: a.nombre,
+    objetivo: objetivo ? `Objetivo ${objetivo.numero}` : 'General',
+    responsable: a.responsable,
+    fInicio: formatDate(a.fechaInicio),
+    fFin: formatDate(a.fechaFinal),
+    estado: a.estado,
+    avance: `${a.avance}%`,
+    presupuesto: formatMoney(a.presupuesto),
+    objetivoFiltro: objetivo ? `Objetivo ${objetivo.numero}` : 'General',
+    idNum: a.id,
+  };
+});
+---
+<DataTable
+  columns={[
+    { label: 'Actividad', key: 'nombre' },
+    { label: 'ID', key: 'id' },
+    { label: 'Objetivo', key: 'objetivo' },
+    { label: 'Responsable', key: 'responsable' },
+    { label: 'Inicio', key: 'fInicio' },
+    { label: 'Final', key: 'fFin' },
+    { label: 'Estado', key: 'estado', badge: true },
+    { label: 'Avance', key: 'avance' },
+    { label: 'Presupuesto', key: 'presupuesto' },
+  ]}
+  rows={tableRows}
+  link={(row) => `/actividades/${(row as any).idNum}`}
+  filters={[
+    { label: 'Objetivo', col: 'objetivo', valueKey: 'objetivoFiltro', options: objetivosDelSet.map((o) => `Objetivo ${o}`) },
+    { label: 'Estado', col: 'estado', options: estadoOpciones },
+    { label: 'Responsable', col: 'responsable', options: responsables },
+  ]}
+  searchable={searchable}
+/>

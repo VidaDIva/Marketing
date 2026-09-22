@@ -1,0 +1,169 @@
+---
+import DemoBadge from '../../components/DemoBadge.astro';
+import DemoNote from '../../components/DemoNote.astro';
+import DataTable from '../../components/DataTable.astro';
+import MarketingChart from '../../components/MarketingChart.astro';
+import StatCard from '../../components/StatCard.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import {
+  comportamientoClientes,
+  conversionMensual,
+  evolucionCampanas,
+  indicadoresMarketing,
+  kpisMarketing,
+  oportunidadesTecnologicas,
+  promocionesPorTipo,
+  rendimientoPorCanal,
+} from '../../data/marketing';
+
+const tablaIndicadores = indicadoresMarketing.map((ind) => ({
+  indicador: ind.indicador,
+  valor: ind.valor,
+  meta: ind.meta,
+  tendencia: ind.tendencia === 'up' ? '↑ Al alza' : ind.tendencia === 'down' ? '↓ A la baja' : '→ Estable',
+}));
+
+interface Punto {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+const aPunto = (s: { etiqueta: string; valor: number; color?: string }): Punto => ({
+  label: s.etiqueta,
+  value: s.valor,
+  color: s.color,
+});
+
+const dificultadTexto: Record<string, string> = { Alto: 'Alta', Medio: 'Media', Bajo: 'Baja' };
+---
+<DashboardLayout
+  title="Marketing · Analítica"
+  subtitle="Panel de analítica de Marketing para el módulo del ERP. Todas las cifras son DEMO."
+>
+  <DemoNote text="Todos los valores de clientes, campañas, conversiones, promociones, canales, comportamiento e indicadores de esta sección son DATOS DE DEMOSTRACIÓN y no representan información real de Almacenes Éxito." />
+
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      {Object.values(kpisMarketing).map((kpi) => (
+        <StatCard
+          title={kpi.titulo}
+          value={kpi.valor}
+          icon="chart"
+          tone="primary"
+          demo={kpi.esDemo}
+          caption={kpi.variacion ?? ''}
+        />
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Evolución de campañas</h2>
+      <span><DemoBadge /></span>
+    </div>
+    <div class="grid grid-2">
+      <div class="card chart-card">
+        <h3>Campañas activas por mes (2026)</h3>
+        <p class="chart-sub">Número de campañas activas en cada mes del año.</p>
+        <MarketingChart kind="lines" data={evolucionCampanas.map(aPunto)} />
+      </div>
+      <div class="card chart-card">
+        <h3>Conversión mensual</h3>
+        <p class="chart-sub">Tasa de conversión estimada (%).</p>
+        <MarketingChart kind="bars" data={conversionMensual.map(aPunto)} unit="%" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="grid grid-2">
+      <div class="card chart-card">
+        <h3>Rendimiento por canal</h3>
+        <p class="chart-sub">Participación estimada del valor por canal (%).</p>
+        <MarketingChart kind="bars" data={rendimientoPorCanal.map(aPunto)} unit="%" />
+      </div>
+      <div class="card chart-card">
+        <h3>Promociones por tipo</h3>
+        <p class="chart-sub">Promociones activas agrupadas por tipo.</p>
+        <MarketingChart kind="bars" data={promocionesPorTipo.map(aPunto)} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="grid grid-2">
+      <div class="card chart-card">
+        <h3>Comportamiento de clientes</h3>
+        <p class="chart-sub">Segmentación estimada de la base de clientes (%).</p>
+        <MarketingChart kind="donut" data={comportamientoClientes.map(aPunto)} unit="%" />
+      </div>
+      <div class="card">
+        <h3>Oportunidades tecnológicas</h3>
+        <p class="card-sub">Tecnologías a evaluar para el módulo de Marketing (ver Objetivo 4).</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          {oportunidadesTecnologicas.map((o) => (
+            <div class="opportunity-item">
+              <span class="marker-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" />
+                </svg>
+              </span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                  <strong style="font-size:.9rem">{o.nombre}</strong>
+                  <StatusBadge status={o.impacto} />
+                </div>
+                <p class="risk-detail" style="margin-top:4px">{o.descripcion}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Indicadores clave de Marketing</h2>
+      <span><DemoBadge text="Indicadores demo" /></span>
+    </div>
+    <DataTable
+      columns={[
+        { label: 'Indicador', key: 'indicador' },
+        { label: 'Valor (demo)', key: 'valor' },
+        { label: 'Meta', key: 'meta' },
+        { label: 'Tendencia', key: 'tendencia' },
+      ]}
+      rows={tablaIndicadores}
+      searchable={false}
+      empty="No hay indicadores registrados."
+    />
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Oportunidades tecnológicas
+        <span style="font-size:.7rem;font-weight:600;margin-left:8px">Impacto y dificultad (DEMO)</span>
+      </h2>
+    </div>
+    <div class="grid grid-3">
+      {oportunidadesTecnologicas.map((o) => (
+        <div class="tech-card">
+          <h4>{o.nombre}</h4>
+          <p>{o.descripcion}</p>
+          <div class="tech-badges">
+            <span style="display:inline-flex">
+              <StatusBadge status={`Impacto ${o.impacto}`} />
+            </span>
+            <span style="display:inline-flex">
+              <StatusBadge status={`Dificultad ${dificultadTexto[o.dificultad] ?? o.dificultad}`} />
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+</DashboardLayout>

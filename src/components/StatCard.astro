@@ -1,0 +1,60 @@
+---
+import { ICONS } from '../data/icons';
+import DemoBadge from './DemoBadge.astro';
+
+type Tone = 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
+interface Props {
+  title: string;
+  value: string | number;
+  icon?: string;
+  caption?: string;
+  trend?: string;
+  to?: string;
+  tone?: Tone;
+  demo?: boolean;
+}
+
+const { title, value, icon = 'pie', caption, trend, to, tone = 'primary', demo = false } = Astro.props as Props;
+---
+{to ? (
+  <a href={to} class="stat-card">
+    <div class="stat-card-top">
+      <span class={`stat-icon tone-${tone}`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d={ICONS[icon] ?? ICONS.pie} />
+        </svg>
+      </span>
+      <div class="stat-inline">{demo && <DemoBadge />}</div>
+    </div>
+    <div class="stat-title">{title}</div>
+    <div class="stat-value">{value}</div>
+    {(trend || caption) && (
+      <div class="stat-caption">
+        {trend && <span class="stat-trend">{trend}</span>}
+        {trend && caption ? ' · ' : ''}
+        {caption}
+      </div>
+    )}
+  </a>
+) : (
+  <div class="stat-card">
+    <div class="stat-card-top">
+      <span class={`stat-icon tone-${tone}`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d={ICONS[icon] ?? ICONS.pie} />
+        </svg>
+      </span>
+      <div class="stat-inline">{demo && <DemoBadge />}</div>
+    </div>
+    <div class="stat-title">{title}</div>
+    <div class="stat-value">{value}</div>
+    {(trend || caption) && (
+      <div class="stat-caption">
+        {trend && <span class="stat-trend">{trend}</span>}
+        {trend && caption ? ' · ' : ''}
+        {caption}
+      </div>
+    )}
+  </div>
+)}

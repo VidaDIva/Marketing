@@ -1,0 +1,52 @@
+---
+import '../styles/global.css';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Header from '../components/Header.astro';
+import Sidebar from '../components/Sidebar.astro';
+import { proyecto } from '../data/proyecto';
+import { getBreadcrumbs } from '../lib/helpers';
+
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle } = Astro.props as Props;
+const path = Astro.url.pathname;
+const crumbs = getBreadcrumbs(path);
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={`${proyecto.sistema} · ${proyecto.modulo}`} />
+    <title>{title} · {proyecto.sistema}</title>
+  </head>
+  <body>
+    <Sidebar currentPath={path} />
+    <div class="main">
+      <Header title={title} />
+      <main class="content">
+        <div class="page-head">
+          <Breadcrumbs items={crumbs} />
+          <h1>{title}</h1>
+          {subtitle && <p class="page-subtitle">{subtitle}</p>}
+        </div>
+        <slot />
+      </main>
+      <footer class="app-footer">
+        © 2026 · {proyecto.organizacion} · {proyecto.sistema} — {proyecto.modulo} — Proyecto académico.
+        Responsable del módulo: {proyecto.responsable}
+      </footer>
+    </div>
+    <div class="sidebar-overlay" data-sidebar-overlay></div>
+    <script>
+      import { initSidebar } from '../scripts/sidebar';
+      initSidebar();
+    </script>
+  </body>
+</html>

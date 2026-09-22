@@ -1,0 +1,29 @@
+---
+import type { Objetivo } from '../data/types';
+import ProgressBar from './ProgressBar.astro';
+import StatusBadge from './StatusBadge.astro';
+
+interface Props {
+  objetivo: Objetivo;
+  compact?: boolean;
+}
+
+const { objetivo, compact = false } = Astro.props as Props;
+---
+<a href={`/objetivos/${objetivo.id}`} class="objective-card" aria-label={`Ver detalle del ${objetivo.nombre}`}>
+  <div class="objective-head">
+    <span class="objective-num">Objetivo {objetivo.numero}</span>
+    <StatusBadge status={objetivo.estado} />
+  </div>
+  <h3>{objetivo.nombre}</h3>
+  <p class="objective-desc">{objetivo.descripcionCorta}</p>
+  {!compact && (
+    <div class="objective-foot">
+      <ProgressBar value={objetivo.avance} showLabel={false} />
+      <div class="objective-meta">
+        <span>Avance: <strong>{objetivo.avance}%</strong></span>
+        <span>Riesgo <StatusBadge status={objetivo.riesgoNivel} /></span>
+      </div>
+    </div>
+  )}
+</a>

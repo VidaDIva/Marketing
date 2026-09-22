@@ -1,0 +1,31 @@
+---
+import ActivityTable from '../../components/ActivityTable.astro';
+import DemoBadge from '../../components/DemoBadge.astro';
+import StatCard from '../../components/StatCard.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { actividades } from '../../data/actividades';
+
+const total = actividades.length;
+const enProceso = actividades.filter((a) => a.estado === 'En proceso').length;
+const completadas = actividades.filter((a) => a.estado === 'Completada').length;
+const retrasadas = actividades.filter((a) => a.estado === 'Retrasada').length;
+const noIniciadas = actividades.filter((a) => a.estado === 'No iniciada').length;
+---
+<DashboardLayout
+  title="Actividades del módulo"
+  subtitle="Todas las actividades planificadas para el módulo de Marketing, con filtros por objetivo, estado y responsable."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      <StatCard title="Total de actividades" value={total} icon="list" tone="neutral" caption="Planificadas para el módulo" />
+      <StatCard title="En proceso" value={enProceso} icon="list" tone="info" caption="En ejecución actualmente" />
+      <StatCard title="No iniciadas" value={noIniciadas} icon="list" tone="warning" caption="Pendientes de inicio" />
+      <StatCard title="Completadas" value={completadas} icon="list" tone="success" caption={retrasadas ? `Retrasadas: ${retrasadas}` : 'Sin retrasos reportados'} />
+    </div>
+    <div style="margin-top:10px">
+      <DemoBadge text="Avances demo" tip="Los porcentajes de avance son datos de demostración." />
+    </div>
+  </section>
+
+  <ActivityTable rows={actividades} />
+</DashboardLayout>

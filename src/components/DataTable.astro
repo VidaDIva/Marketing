@@ -1,0 +1,92 @@
+---
+import StatusBadge from './StatusBadge.astro';
+
+interface Filter {
+  label: string;
+  col: string;
+  options: string[];
+  valueKey?: string;
+}
+
+interface Column {
+  label: string;
+  key: string;
+  badge?: boolean;
+}
+
+interface Props {
+  columns: Column[];
+  rows: Record<string, any>[];
+  link?: (row: Record<string, any>) => string;
+  filters?: Filter[];
+  searchable?: boolean;
+  empty?: string;
+}
+
+const { columns, rows, link, filters = [], searchable = true, empty = 'No hay registros para mostrar.' } = Astro.props as Props;
+
+const filterAttrs = (row: Record<string, any>): Record<string, string> =>
+  Object.fromEntries(
+    filters.map((f) => [`data:f-${f.col}`, String(row[f.valueKey ?? f.col] ?? '')]),
+  ) as Record<string, string>;
+---
+<div class="card data-table">
+  {(filters.length > 0 || searchable) && (
+    <div class="table-toolbar">
+      {filters.map((f) => (
+        <select class="input" data-filter-col={f.col} aria-label={`Filtrar por ${f.label}`}>
+          <option value="">{f.label}: todos</option>
+          {f.options.map((o) => (
+            <option value={o}>{o}</option>
+          ))}
+        </select>
+      ))}
+      {searchable && (
+        <input class="input table-search" type="search" data-table-search placeholder="Buscar..." aria-label="Buscar" />
+      )}
+      <span class="table-count" data-table-count></span>
+    </div>
+  )}
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          {columns.map((c) => (
+            <th>{c.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody data-table-body>
+        {rows.length === 0 ? (
+          <tr>
+            <td class="empty-cell" colspan={columns.length}>
+              <div class="empty-state">{empty}</div>
+            </td>
+          </tr>
+        ) : (
+          rows.map((row) => {
+            const href = link ? link(row) : undefined;
+            const attrs = filterAttrs(row);
+            return (
+              <tr data-table-row {...attrs}>
+                {columns.map((c, ci) => {
+                  const val = String(row[c.key] ?? '');
+                  const cell = c.badge ? <StatusBadge status={val} /> : <span>{val}</span>;
+                  return (
+                    <td>
+                      {ci === 0 && href ? <a class="table-link" href={href}>{cell}</a> : cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })
+        )}
+      </tbody>
+    </table>
+    <script>
+      import { setupTableFilters } from '../scripts/table-filters';
+      document.querySelectorAll<HTMLElement>('.data-table').forEach((el) => setupTableFilters(el));
+    </script>
+  </div>
+</div>

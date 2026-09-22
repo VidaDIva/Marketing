@@ -1,0 +1,161 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import DemoBadge from '../../components/DemoBadge.astro';
+import ProgressBar from '../../components/ProgressBar.astro';
+import RiskCard from '../../components/RiskCard.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { objetivos } from '../../data/objetivos';
+import { getPresupuestoObjetivo } from '../../data/presupuesto';
+import {
+  daysBetween,
+  formatDate,
+  formatMoney,
+  getActividadesPorObjetivo,
+  getEntregablesPorObjetivo,
+  getObjetivo,
+  getRiesgosPorObjetivo,
+} from '../../lib/helpers';
+
+export function getStaticPaths() {
+  return objetivos.map((o) => ({ params: { id: String(o.id) } }));
+}
+
+const { id } = Astro.params as { id: string };
+const objetivo = getObjetivo(Number(id));
+
+if (!objetivo) {
+  throw new Error(`Objetivo ${id} no encontrado`);
+}
+
+const actividadesObj = getActividadesPorObjetivo(objetivo.id);
+const riesgosObj = getRiesgosPorObjetivo(objetivo.id);
+const entregablesObj = getEntregablesPorObjetivo(objetivo.id);
+const presupuesto = getPresupuestoObjetivo(objetivo.id);
+
+const rowsActividades = actividadesObj.map((a) => ({
+  id: `A${String(a.id).padStart(2, '0')}`,
+  nombre: a.nombre,
+  responsable: a.responsable,
+  inicio: formatDate(a.fechaInicio),
+  final: formatDate(a.fechaFinal),
+  estado: a.estado,
+  avance: `${a.avance}%`,
+  idNum: a.id,
+}));
+---
+<DashboardLayout
+  title={`Objetivo ${objetivo.numero}`}
+  subtitle={objetivo.nombre}
+>
+  <section style="margin-bottom:20px">
+    <div class="card">
+      <div class="objetivo-hero">
+        <div class="objetivo-hero-num">{objetivo.numero}</div>
+        <div style="flex:1;min-width:0">
+          <h2 class="objetivo-hero-title">{objetivo.nombre}</h2>
+          <div class="objetivo-hero-badges">
+            <StatusBadge status={objetivo.estado} />
+            <span class="risk-id">Riesgo:</span>
+            <StatusBadge status={objetivo.riesgoNivel} />
+            <DemoBadge text="Avance demo" tip="El porcentaje de avance es un dato de demostración." />
+          </div>
+          <p class="risk-detail" style="margin-top:10px">{objetivo.descripcion}</p>
+        </div>
+      </div>
+
+      <div class="meta-list" style="margin-top:4px">
+        <div class="meta-row">
+          <span class="meta-k">Responsable</span>
+          <span class="meta-v">{objetivo.responsable}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Ventana del objetivo</span>
+          <span class="meta-v">{formatDate(objetivo.fechaInicio)} → {formatDate(objetivo.fechaFinal)} ({daysBetween(objetivo.fechaInicio, objetivo.fechaFinal)} días)</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Avance actual</span>
+          <span style="flex:1;max-width:340px"><ProgressBar value={objetivo.avance} tone="auto" /></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="margin-top:0">
+    <div class="grid grid-4">
+      <div class="card">
+        <h3>Presupuesto del objetivo</h3>
+        <p class="card-sub">Total oficial · ejecutado DEMO</p>
+        <div style="font-size:1.4rem;font-weight:800">{presupuesto ? formatMoney(presupuesto.total) : '-'}</div>
+        {presupuesto && (
+          <div class="meta-list" style="margin-top:12px">
+            <div class="meta-row"><span class="meta-k">Ejecutado (demo)</span><span class="meta-v text-success">{formatMoney(presupuesto.ejecutado)}</span></div>
+            <div class="meta-row"><span class="meta-k">Pendiente (demo)</span><span class="meta-v">{formatMoney(presupuesto.pendiente)}</span></div>
+            <div class="meta-row"><span class="meta-k">Ejecución</span><span class="meta-v">{presupuesto.porcentajeEjecucion}%</span></div>
+          </div>
+        )}
+        <div style="margin-top:12px"><a class="btn btn-ghost" href="/dashboard/presupuesto">Ver presupuesto →</a></div>
+      </div>
+
+      <div class="card">
+        <h3>Entregables</h3>
+        <p class="card-sub">Asociados a este objetivo</p>
+        {entregablesObj.length === 0 ? (
+          <div class="empty-state">Sin entregables asociados (entregable general del proyecto).</div>
+        ) : (
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            {entregablesObj.map((e) => (
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;background:var(--c-neutral-soft);border-radius:10px">
+                <span style="font-size:.84rem;font-weight:600">{e.nombre}</span>
+                <StatusBadge status={e.estado} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div class="card">
+        <h3>Riesgos (demo)</h3>
+        <p class="card-sub">Riesgos del objetivo</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+          {riesgosObj.map((r) => <RiskCard riesgo={r} showMitigacion={false} />)}
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Cronograma</h3>
+        <p class="card-sub">Ventana dentro del módulo</p>
+        <div class="meta-list" style="margin-top:8px">
+          <div class="meta-row"><span class="meta-k">Inicio</span><span class="meta-v">{formatDate(objetivo.fechaInicio)}</span></div>
+          <div class="meta-row"><span class="meta-k">Final</span><span class="meta-v">{formatDate(objetivo.fechaFinal)}</span></div>
+          <div class="meta-row"><span class="meta-k">Duración</span><span class="meta-v">{daysBetween(objetivo.fechaInicio, objetivo.fechaFinal)} días</span></div>
+          <div class="meta-row"><span class="meta-k">Actividades</span><span class="meta-v">{actividadesObj.length}</span></div>
+        </div>
+        <div style="margin-top:14px"><a class="btn btn-ghost" href="/dashboard/cronograma">Ver cronograma →</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Actividades relacionadas</h2>
+      <a class="as-link" href="/dashboard/actividades">Todas las actividades →
+      </a>
+    </div>
+    <DataTable
+      columns={[
+        { label: 'Actividad', key: 'nombre' },
+        { label: 'ID', key: 'id' },
+        { label: 'Responsable', key: 'responsable' },
+        { label: 'Inicio', key: 'inicio' },
+        { label: 'Final', key: 'final' },
+        { label: 'Estado', key: 'estado', badge: true },
+        { label: 'Avance', key: 'avance' },
+      ]}
+      rows={rowsActividades}
+      link={(row) => `/actividades/${(row as any).idNum}`}
+      searchable={false}
+      empty="Este objetivo no tiene actividades asociadas."
+    />
+  </section>
+</DashboardLayout>

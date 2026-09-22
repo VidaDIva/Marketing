@@ -1,0 +1,26 @@
+---
+interface Props {
+  value: number;
+  tone?: 'auto' | 'success' | 'info' | 'warning' | 'danger';
+  showLabel?: boolean;
+}
+
+const { value, tone = 'auto', showLabel = true } = Astro.props as Props;
+const clamped = Math.max(0, Math.min(100, value));
+const toneClass =
+  tone === 'auto'
+    ? clamped >= 75
+      ? 'progress--success'
+      : clamped >= 45
+        ? 'progress--info'
+        : clamped >= 20
+          ? 'progress--warning'
+          : 'progress--danger'
+    : `progress--${tone}`;
+---
+<div class="progress-wrap">
+  <div class="progress" role="progressbar" aria-valuenow={clamped} aria-valuemin="0" aria-valuemax="100" aria-label={`Avance ${clamped}%`}>
+    <div class={`progress-fill ${toneClass}`} style={`width:${clamped}%`}></div>
+  </div>
+  {showLabel && <span class="progress-label">{clamped}%</span>}
+</div>

@@ -1,0 +1,153 @@
+---
+import DemoBadge from '../../components/DemoBadge.astro';
+import DemoNote from '../../components/DemoNote.astro';
+import ObjectiveCard from '../../components/ObjectiveCard.astro';
+import ProgressBar from '../../components/ProgressBar.astro';
+import RiskCard from '../../components/RiskCard.astro';
+import StatCard from '../../components/StatCard.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { actividades } from '../../data/actividades';
+import { entregables } from '../../data/entregables';
+import { objetivos } from '../../data/objetivos';
+import { presupuestoGeneral } from '../../data/presupuesto';
+import { riesgos } from '../../data/riesgos';
+import { formatMoney, getObjetivo } from '../../lib/helpers';
+
+const totalActividades = actividades.length;
+const enProceso = actividades.filter((a) => a.estado === 'En proceso').length;
+const noIniciadas = actividades.filter((a) => a.estado === 'No iniciada').length;
+const completadas = actividades.filter((a) => a.estado === 'Completada').length;
+const retrasadas = actividades.filter((a) => a.estado === 'Retrasada').length;
+
+const riesgosAltos = riesgos.filter((r) => r.nivel === 'Alto').length;
+const riesgosMedios = riesgos.filter((r) => r.nivel === 'Medio').length;
+const riesgosMitigados = riesgos.filter((r) => r.estado === 'Mitigado').length;
+
+const entregablesCompletados = entregables.filter((e) => e.estado === 'Completado').length;
+const entregablesEnProceso = entregables.filter((e) => e.estado === 'En proceso').length;
+const entregablesPendientes = entregables.filter((e) => e.estado === 'Pendiente').length;
+
+const objetivosEnProceso = objetivos.filter((o) => o.estado === 'En proceso').length;
+
+const actividadesRecientes = actividades.slice(0, 6);
+const riesgosActivos = riesgos.filter((r) => r.estado !== 'Mitigado').slice(0, 3);
+---
+<DashboardLayout
+  title="Panel ejecutivo"
+  subtitle="Seguimiento general del módulo de Marketing del ERP Almacenes Éxito."
+>
+  <DemoNote text="Los valores mostrados como 'Demo' (porcentajes de avance, ejecutado de presupuesto, etc.) son datos de demostración para visualizar el dashboard y no representan información oficial del proyecto." />
+
+  <section class="section" style="margin-top:0">
+    <div class="grid grid-3">
+      <StatCard
+        title="Avance general"
+        value={`${presupuestoGeneral.porcentajeEjecucion}%`}
+        icon="gauge"
+        tone="primary"
+        to="/dashboard/objetivos"
+        demo
+        caption="Ejecución global de los 5 objetivos"
+      />
+      <StatCard
+        title="Actividades"
+        value={totalActividades}
+        icon="list"
+        tone="info"
+        to="/dashboard/actividades"
+        caption={`${enProceso} en proceso · ${noIniciadas} no iniciadas${completadas ? ` · ${completadas} completadas` : ''}${retrasadas ? ` · ${retrasadas} retrasadas` : ''}`}
+      />
+      <StatCard
+        title="Presupuesto"
+        value="$18.300.000"
+        icon="coins"
+        tone="success"
+        to="/dashboard/presupuesto"
+        demo
+        caption={`Ejecutado ${presupuestoGeneral.porcentajeEjecucion}% · Pendiente ${formatMoney(presupuestoGeneral.pendiente)}`}
+      />
+    </div>
+    <div class="grid grid-3" style="margin-top:16px">
+      <StatCard
+        title="Riesgos"
+        value={riesgos.length}
+        icon="alert"
+        tone="warning"
+        to="/dashboard/riesgos"
+        caption={`${riesgosAltos} alto · ${riesgosMedios} medios · ${riesgosMitigados} mitigados`}
+      />
+      <StatCard
+        title="Entregables"
+        value={entregables.length}
+        icon="folder"
+        tone="neutral"
+        to="/dashboard/entregables"
+        caption={`${entregablesCompletados} completados · ${entregablesEnProceso} en proceso · ${entregablesPendientes} pendientes`}
+      />
+      <StatCard
+        title="Objetivos"
+        value={objetivos.length}
+        icon="target"
+        tone="info"
+        to="/dashboard/objetivos"
+        caption={`${objetivosEnProceso} en proceso · ${objetivos.length - objetivosEnProceso} en preparación`}
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Progreso por objetivo</h2>
+      <a class="as-link" href="/dashboard/objetivos">Ver todos →
+      </a>
+    </div>
+    <div class="grid grid-2">
+      {objetivos.map((o) => <ObjectiveCard objetivo={o} />)}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Actividades recientes</h3>
+        <p class="card-sub">Primeras actividades del módulo. Haz clic para ver el detalle.</p>
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Actividad</th>
+                <th>Objetivo</th>
+                <th>Avance</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {actividadesRecientes.map((a) => {
+                const obj = getObjetivo(a.objetivoId);
+                return (
+                  <tr>
+                    <td><a class="table-link" href={`/actividades/${a.id}`}>{a.nombre}</a></td>
+                    <td>{obj ? `Objetivo ${obj.numero}` : 'General'}</td>
+                    <td style="width:150px"><ProgressBar value={a.avance} /></td>
+                    <td><StatusBadge status={a.estado} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Riesgos a monitorear
+          <span style="margin-left:8px"><DemoBadge /></span>
+        </h3>
+        <p class="card-sub">Riesgos activos o en seguimiento, alineados con los objetivos del módulo.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          {riesgosActivos.map((r) => <RiskCard riesgo={r} />)}
+        </div>
+      </div>
+    </div>
+  </section>
+</DashboardLayout>

@@ -1,0 +1,57 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import DemoBadge from '../../components/DemoBadge.astro';
+import StatCard from '../../components/StatCard.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { entregables } from '../../data/entregables';
+import { formatDate, getObjetivo } from '../../lib/helpers';
+
+const total = entregables.length;
+const completados = entregables.filter((e) => e.estado === 'Completado').length;
+const enProceso = entregables.filter((e) => e.estado === 'En proceso').length;
+const pendientes = entregables.filter((e) => e.estado === 'Pendiente').length;
+
+const tableRows = entregables.map((e) => {
+  const obj = e.objetivoId ? getObjetivo(e.objetivoId) : undefined;
+  return {
+    entregable: e.nombre,
+    descripcion: e.descripcion,
+    objetivo: obj ? `Objetivo ${obj.numero}` : 'General',
+    responsable: e.responsable,
+    fecha: formatDate(e.fecha),
+    estado: e.estado,
+  };
+});
+---
+<DashboardLayout
+  title="Entregables del proyecto"
+  subtitle="Entregables del proyecto asociados al módulo de Marketing."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      <StatCard title="Total de entregables" value={total} icon="folder" tone="neutral" />
+      <StatCard title="Completados" value={completados} icon="folder" tone="success" />
+      <StatCard title="En proceso" value={enProceso} icon="folder" tone="info" />
+      <StatCard title="Pendientes" value={pendientes} icon="folder" tone="warning" />
+    </div>
+    <div style="margin-top:10px">
+      <DemoBadge text="Estados demo" tip="Los estados de los entregables son de demostración." />
+    </div>
+  </section>
+
+  <DataTable
+    columns={[
+      { label: 'Entregable', key: 'entregable' },
+      { label: 'Objetivo relacionado', key: 'objetivo' },
+      { label: 'Responsable', key: 'responsable' },
+      { label: 'Fecha', key: 'fecha' },
+      { label: 'Estado', key: 'estado', badge: true },
+    ]}
+    rows={tableRows}
+    filters={[
+      { label: 'Estado', col: 'estado', options: ['Pendiente', 'En proceso', 'Completado'] },
+      { label: 'Objetivo', col: 'objetivo', options: ['General', 'Objetivo 1', 'Objetivo 2', 'Objetivo 3', 'Objetivo 4', 'Objetivo 5'] },
+    ]}
+    empty="No hay entregables registrados."
+  />
+</DashboardLayout>

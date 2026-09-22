@@ -1,0 +1,29 @@
+---
+import type { Riesgo } from '../data/types';
+import { getObjetivo } from '../lib/helpers';
+import StatusBadge from './StatusBadge.astro';
+
+interface Props {
+  riesgo: Riesgo;
+  showMitigacion?: boolean;
+}
+
+const { riesgo, showMitigacion = true } = Astro.props as Props;
+const objetivo = getObjetivo(riesgo.objetivoId);
+---
+<article class={`risk-card level-${riesgo.nivel}`}>
+  <div class="risk-top">
+    <span class="risk-id">R{riesgo.id} · {objetivo ? `Objetivo ${objetivo.numero}` : 'General'}</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <StatusBadge status={riesgo.nivel} />
+      <StatusBadge status={riesgo.estado} />
+    </div>
+  </div>
+  <h4>{riesgo.descripcion}</h4>
+  <p class="risk-detail">{riesgo.detalle}</p>
+  {showMitigacion && (
+    <div class="risk-mitigacion">
+      <strong>Mitigación:</strong> {riesgo.mitigacion}
+    </div>
+  )}
+</article>

@@ -1,0 +1,50 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import ObjectiveCard from '../../components/ObjectiveCard.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { objetivos } from '../../data/objetivos';
+import { getPresupuestoObjetivo } from '../../data/presupuesto';
+import { formatDate, formatMoney } from '../../lib/helpers';
+
+const tableRows = objetivos.map((o) => ({
+  numero: `Objetivo ${o.numero}`,
+  nombre: o.nombre,
+  responsable: o.responsable,
+  ventana: `${formatDate(o.fechaInicio)} → ${formatDate(o.fechaFinal)}`,
+  estado: o.estado,
+  avance: `${o.avance}%`,
+  presupuesto: formatMoney(getPresupuestoObjetivo(o.id)?.total ?? 0),
+  id: o.id,
+}));
+---
+<DashboardLayout
+  title="Objetivos del módulo"
+  subtitle="Los cinco objetivos que orientan el desarrollo del módulo de Marketing."
+>
+  <section>
+    <div class="grid grid-2">
+      {objetivos.map((o) => <ObjectiveCard objetivo={o} />)}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Resumen por objetivo</h2>
+    </div>
+    <DataTable
+      columns={[
+        { label: 'Objetivo', key: 'numero' },
+        { label: 'Nombre', key: 'nombre' },
+        { label: 'Responsable', key: 'responsable' },
+        { label: 'Ventana', key: 'ventana' },
+        { label: 'Estado', key: 'estado', badge: true },
+        { label: 'Avance', key: 'avance' },
+        { label: 'Presupuesto', key: 'presupuesto' },
+      ]}
+      rows={tableRows}
+      link={(row) => `/objetivos/${(row as any).id}`}
+      searchable={false}
+      empty="No hay objetivos registrados."
+    />
+  </section>
+</DashboardLayout>

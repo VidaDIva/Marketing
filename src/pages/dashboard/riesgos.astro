@@ -1,0 +1,63 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import DemoBadge from '../../components/DemoBadge.astro';
+import StatCard from '../../components/StatCard.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { riesgos } from '../../data/riesgos';
+import { getObjetivo } from '../../lib/helpers';
+
+const total = riesgos.length;
+const altos = riesgos.filter((r) => r.nivel === 'Alto').length;
+const medios = riesgos.filter((r) => r.nivel === 'Medio').length;
+const bajos = riesgos.filter((r) => r.nivel === 'Bajo').length;
+const mitigados = riesgos.filter((r) => r.estado === 'Mitigado').length;
+
+const tableRows = riesgos.map((r) => {
+  const obj = getObjetivo(r.objetivoId);
+  return {
+    id: `R${r.id}`,
+    objetivo: obj ? `Objetivo ${obj.numero}` : 'General',
+    riesgo: r.descripcion,
+    nivel: r.nivel,
+    estado: r.estado,
+    responsable: r.responsable,
+    mitigacion: r.mitigacion,
+  };
+});
+---
+<DashboardLayout
+  title="Riesgos del módulo"
+  subtitle="Riesgos asociados a los objetivos, con su nivel, responsable y plan de mitigación."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-6">
+      <StatCard title="Total de riesgos" value={total} icon="alert" tone="neutral" />
+      <StatCard title="Altos" value={altos} icon="alert" tone="danger" />
+      <StatCard title="Medios" value={medios} icon="alert" tone="warning" />
+      <StatCard title="Bajos" value={bajos} icon="alert" tone="success" />
+      <StatCard title="Mitigados" value={mitigados} icon="shield" tone="info" />
+      <StatCard title="Nivel definido" value="O3: Alto" icon="target" tone="primary" caption="Los demás objetivos: Medio" />
+    </div>
+    <div style="margin-top:10px">
+      <DemoBadge text="Estados demo" tip="Los estados y detalle de los riesgos son de demostración." />
+    </div>
+  </section>
+
+  <DataTable
+    columns={[
+      { label: 'ID', key: 'id' },
+      { label: 'Objetivo', key: 'objetivo' },
+      { label: 'Riesgo', key: 'riesgo' },
+      { label: 'Nivel', key: 'nivel', badge: true },
+      { label: 'Estado', key: 'estado', badge: true },
+      { label: 'Responsable', key: 'responsable' },
+      { label: 'Mitigación', key: 'mitigacion' },
+    ]}
+    rows={tableRows}
+    filters={[
+      { label: 'Nivel', col: 'nivel', options: ['Alto', 'Medio', 'Bajo'] },
+      { label: 'Estado', col: 'estado', options: ['Activo', 'En seguimiento', 'Mitigado'] },
+    ]}
+    empty="No hay riesgos registrados que coincidan con el filtro."
+  />
+</DashboardLayout>

@@ -1,0 +1,138 @@
+---
+import DemoBadge from '../../components/DemoBadge.astro';
+import ProgressBar from '../../components/ProgressBar.astro';
+import RiskCard from '../../components/RiskCard.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { actividades } from '../../data/actividades';
+import {
+  daysBetween,
+  formatDate,
+  formatMoney,
+  getActividad,
+  getEntregableDeActividad,
+  getObjetivo,
+  getRiesgosPorActividad,
+} from '../../lib/helpers';
+
+export function getStaticPaths() {
+  return actividades.map((a) => ({ params: { id: String(a.id) } }));
+}
+
+const { id } = Astro.params as { id: string };
+const actividad = getActividad(Number(id));
+
+if (!actividad) {
+  throw new Error(`Actividad ${id} no encontrada`);
+}
+
+const objetivo = getObjetivo(actividad.objetivoId);
+const entregable = getEntregableDeActividad(actividad.id);
+const riesgosActividad = getRiesgosPorActividad(actividad.id);
+---
+<DashboardLayout
+  title={actividad.nombre}
+  subtitle={`Actividad A${String(actividad.id).padStart(2, '0')} del módulo de Marketing`}
+>
+  <section style="margin-bottom:16px">
+    <a class="btn btn-ghost" href="/dashboard/actividades">← Volver a actividades</a>
+  </section>
+
+  <section>
+    <div class="card">
+      <div class="objetivo-hero">
+        <div class="objetivo-hero-num" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 8px 20px rgba(37,99,235,.3)">
+          A{String(actividad.id).padStart(2, '0')}
+        </div>
+        <div style="flex:1;min-width:0">
+          <h2 class="objetivo-hero-title" style="font-size:1.15rem">{actividad.nombre}</h2>
+          <div class="objetivo-hero-badges">
+            <StatusBadge status={actividad.estado} />
+            <DemoBadge text="Avance demo" tip="El porcentaje de avance es un dato de demostración." />
+          </div>
+          <p class="risk-detail" style="margin-top:10px">{actividad.descripcion}</p>
+        </div>
+      </div>
+
+      <div class="meta-list" style="margin-top:6px">
+        <div class="meta-row">
+          <span class="meta-k">Objetivo relacionado</span>
+          <span class="meta-v">{objetivo ? <a href={`/objetivos/${objetivo.id}`}>Objetivo {objetivo.numero}: {objetivo.nombre}</a> : 'General'}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Responsable</span>
+          <span class="meta-v">{actividad.responsable}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Fecha de inicio</span>
+          <span class="meta-v">{formatDate(actividad.fechaInicio)}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Fecha final</span>
+          <span class="meta-v">{formatDate(actividad.fechaFinal)}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Duración</span>
+          <span class="meta-v">{daysBetween(actividad.fechaInicio, actividad.fechaFinal)} días</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Estado</span>
+          <span class="meta-v"><StatusBadge status={actividad.estado} /></span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Avance</span>
+          <span style="flex:1;max-width:340px"><ProgressBar value={actividad.avance} /></span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Presupuesto</span>
+          <span class="meta-v">{formatMoney(actividad.presupuesto)}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Entregable asociado</span>
+          <span class="meta-v">{entregable ? entregable.nombre : 'Sin entregable directo'}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Riesgos relacionados (demo)</h3>
+        <p class="card-sub">Riesgos que impactan esta actividad</p>
+        {riesgosActividad.length === 0 ? (
+          <div class="empty-state">No hay riesgos directamente relacionados.</div>
+        ) : (
+          <div style="display:flex;flex-direction:column;gap:12px">
+            {riesgosActividad.map((r) => <RiskCard riesgo={r} />)}
+          </div>
+        )}
+      </div>
+
+      <div class="card">
+        <h3>Siguientes pasos</h3>
+        <p class="card-sub">Relaciones de navegación útiles</p>
+        <div class="markers">
+          <a class="marker-item" href={`/objetivos/${objetivo?.id ?? 1}`}>
+            <span class="marker-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" /></svg>
+            </span>
+            <span>Ver el objetivo {objetivo ? objetivo.numero : ''} completo</span>
+          </a>
+          <a class="marker-item" href="/dashboard/actividades">
+            <span class="marker-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.008v.008H3.75V6.75Zm0 5.25h.008v.008H3.75V12Zm0 5.25h.008v.008H3.75v-.008Z" /></svg>
+            </span>
+            <span>Todas las actividades del módulo</span>
+          </a>
+          <a class="marker-item" href="/dashboard/cronograma">
+            <span class="marker-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75" /></svg>
+            </span>
+            <span>Ver el cronograma del módulo</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</DashboardLayout>

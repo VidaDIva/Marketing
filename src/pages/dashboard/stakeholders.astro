@@ -1,0 +1,59 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import DemoBadge from '../../components/DemoBadge.astro';
+import StatCard from '../../components/StatCard.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { stakeholders } from '../../data/stakeholders';
+
+const internos = stakeholders.filter((s) => s.tipo === 'Interno').length;
+const externos = stakeholders.filter((s) => s.tipo === 'Externo').length;
+const altaInfluencia = stakeholders.filter((s) => s.influencia === 'Alto').length;
+const altoInteres = stakeholders.filter((s) => s.interes === 'Alto').length;
+
+const areas = [...new Set(stakeholders.map((s) => s.area))].sort();
+
+const tableRows = stakeholders.map((s) => ({
+  nombre: s.nombre,
+  tipo: s.tipo,
+  rol: s.rol,
+  area: s.area,
+  influencia: s.influencia,
+  interes: s.interes,
+  responsabilidad: s.responsabilidad,
+}));
+---
+<DashboardLayout
+  title="Stakeholders del módulo"
+  subtitle="Actores internos y externos relacionados con el área de Marketing."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      <StatCard title="Internos" value={internos} icon="users" tone="info" caption="Áreas de la organización" />
+      <StatCard title="Externos" value={externos} icon="users" tone="primary" caption="Actores del ecosistema" />
+      <StatCard title="Alta influencia" value={altaInfluencia} icon="target" tone="warning" caption="Nivel de influencia" />
+      <StatCard title="Alto interés" value={altoInteres} icon="gauge" tone="success" caption="Nivel de interés" />
+    </div>
+    <div style="margin-top:10px">
+      <DemoBadge text="Matriz demo" tip="La matriz de stakeholders es una aproximación de demostración." />
+    </div>
+  </section>
+
+  <DataTable
+    columns={[
+      { label: 'Nombre', key: 'nombre' },
+      { label: 'Tipo', key: 'tipo', badge: true },
+      { label: 'Cargo / Rol', key: 'rol' },
+      { label: 'Área', key: 'area' },
+      { label: 'Influencia', key: 'influencia', badge: true },
+      { label: 'Interés', key: 'interes', badge: true },
+      { label: 'Responsabilidad', key: 'responsabilidad' },
+    ]}
+    rows={tableRows}
+    filters={[
+      { label: 'Tipo', col: 'tipo', options: ['Interno', 'Externo'] },
+      { label: 'Área', col: 'area', options: areas },
+      { label: 'Influencia', col: 'influencia', options: ['Alto', 'Medio', 'Bajo'] },
+    ]}
+    empty="No hay stakeholders que coincidan con el filtro."
+  />
+</DashboardLayout>

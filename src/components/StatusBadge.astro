@@ -1,0 +1,10 @@
+---
+import { toneFor } from '../lib/helpers';
+
+interface Props {
+  status: string;
+}
+
+const { status } = Astro.props;
+---
+<span class={`badge badge--${toneFor(status)}`}>{status}</span>

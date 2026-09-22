@@ -1,0 +1,91 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import DemoBadge from '../../components/DemoBadge.astro';
+import StatCard from '../../components/StatCard.astro';
+import Timeline from '../../components/Timeline.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { actividades } from '../../data/actividades';
+import { proyecto } from '../../data/proyecto';
+import { daysBetween, formatDate, formatMoney, getObjetivo } from '../../lib/helpers';
+
+const duracionProyecto = daysBetween(proyecto.fechaInicio, proyecto.fechaFinal);
+const duracionModulo = daysBetween(proyecto.moduloInicio, proyecto.moduloFinal);
+
+const ganttItems = actividades.map((a) => ({
+  id: a.id,
+  nombre: a.nombre,
+  objetivoId: a.objetivoId,
+  fechaInicio: a.fechaInicio,
+  fechaFinal: a.fechaFinal,
+  estado: a.estado,
+  avance: a.avance,
+}));
+
+const tableRows = actividades.map((a) => {
+  const obj = getObjetivo(a.objetivoId);
+  return {
+    actividad: a.nombre,
+    objetivo: obj ? `Objetivo ${obj.numero}` : 'General',
+    responsable: a.responsable,
+    inicio: formatDate(a.fechaInicio),
+    final: formatDate(a.fechaFinal),
+    estado: a.estado,
+    avance: `${a.avance}%`,
+    presupuesto: formatMoney(a.presupuesto),
+  };
+});
+---
+<DashboardLayout
+  title="Cronograma"
+  subtitle="Ventana del proyecto y del módulo de Marketing con vista tipo Gantt."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      <StatCard title="Inicio del proyecto" value={formatDate(proyecto.fechaInicio)} icon="calendar" tone="neutral" caption="Ventana general" />
+      <StatCard title="Cierre del proyecto" value={formatDate(proyecto.fechaFinal)} icon="calendar" tone="neutral" caption={`${duracionProyecto} días totales`} />
+      <StatCard title="Inicio del módulo" value={formatDate(proyecto.moduloInicio)} icon="calendar" tone="primary" caption="ERP · Marketing" />
+      <StatCard title="Cierre del módulo" value={formatDate(proyecto.moduloFinal)} icon="calendar" tone="primary" caption={`${duracionModulo} días del módulo`} />
+    </div>
+    <div style="margin-top:10px">
+      <DemoBadge text="Avances demo" tip="Los estados y porcentajes de avance del cronograma son de demostración." />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Cronograma de actividades del módulo</h2>
+      <span>Ventana: {formatDate(proyecto.moduloInicio)} → {formatDate(proyecto.moduloFinal)}</span>
+    </div>
+    <Timeline
+      items={ganttItems}
+      inicio={proyecto.moduloInicio}
+      fin={proyecto.moduloFinal}
+      etiquetaInicio={proyecto.area}
+      etiquetaFin="Cierre del módulo"
+    />
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Tabla del cronograma</h2>
+    </div>
+    <DataTable
+      columns={[
+        { label: 'Actividad', key: 'actividad' },
+        { label: 'Objetivo', key: 'objetivo' },
+        { label: 'Responsable', key: 'responsable' },
+        { label: 'Inicio', key: 'inicio' },
+        { label: 'Final', key: 'final' },
+        { label: 'Estado', key: 'estado', badge: true },
+        { label: 'Avance', key: 'avance' },
+        { label: 'Presupuesto', key: 'presupuesto' },
+      ]}
+      rows={tableRows}
+      filters={[
+        { label: 'Estado', col: 'estado', options: ['No iniciada', 'En proceso', 'Completada', 'Retrasada'] },
+      ]}
+      searchable={true}
+      empty="No hay actividades en el cronograma."
+    />
+  </section>
+</DashboardLayout>

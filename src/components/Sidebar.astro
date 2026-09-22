@@ -1,0 +1,56 @@
+---
+import { ICONS } from '../data/icons';
+import { navItems } from '../data/navegacion';
+import { proyecto } from '../data/proyecto';
+import { formatDate, getActiveSection } from '../lib/helpers';
+
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props as Props;
+const active = getActiveSection(currentPath);
+---
+<aside class="sidebar" data-sidebar>
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">N</div>
+    <div class="sidebar-brand-text">
+      <strong>ERP Almacenes Éxito</strong>
+      <span>Módulo de Marketing</span>
+    </div>
+    <button class="sidebar-close" data-sidebar-close type="button" aria-label="Cerrar menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M6 18 18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Navegación principal">
+    <div class="sidebar-label">Área de Marketing</div>
+    {navItems.map((item) => (
+      <a
+        href={item.href}
+        class:list={['sidebar-link', { active: active === item.href }]}
+        aria-current={active === item.href ? 'page' : undefined}
+        title={item.label}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d={ICONS[item.icon] ?? ICONS.pie} />
+        </svg>
+        <span>{item.label}</span>
+      </a>
+    ))}
+  </nav>
+
+  <footer class="sidebar-footer">
+    <div>Proyecto ERP · Almacenes Éxito</div>
+    <div class="estado-fila">
+      <span>Estado</span>
+      <span class="fecha">{proyecto.estado}</span>
+    </div>
+    <div class="estado-fila">
+      <span>Módulo Marketing</span>
+      <span class="fecha">{formatDate(proyecto.moduloInicio)} → {formatDate(proyecto.moduloFinal)}</span>
+    </div>
+  </footer>
+</aside>

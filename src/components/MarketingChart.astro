@@ -1,0 +1,132 @@
+---
+interface Point {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+interface Props {
+  kind: 'bars' | 'lines' | 'donut';
+  data: Point[];
+  unit?: string;
+}
+
+const { kind, data, unit = '' } = Astro.props as Props;
+const palette = ['#0f9d6b', '#2563eb', '#f59e0b', '#8b5cf6', '#0d9488', '#f97316'];
+const points = data.map((d, i) => ({ ...d, color: d.color ?? palette[i % palette.length] }));
+const max = Math.max(...points.map((p) => p.value), 1);
+const sumTotal = points.reduce((s, p) => s + p.value, 0);
+
+const fmt = (v: number): string => `${String(v).replace('.', ',')}${unit}`;
+---
+
+{
+  kind === 'bars' ? (
+    <div class="chart-body">
+      <svg viewBox={`0 0 ${Math.max(220, points.length * 46)} 150`} role="img" aria-label="Gráfico de barras">
+        {(() => {
+          const W = Math.max(220, points.length * 46);
+          const H = 150;
+          const bw = Math.min(54, W / points.length / 1.7);
+          return points.map((p, i) => {
+            const barH = (p.value / max) * (H - 46);
+            const x = i * (W / points.length) + (W / points.length - bw) / 2;
+            const y = H - 22 - barH;
+            return (
+              <g>
+                <rect x={x} y={y} width={bw} height={barH} rx="5" fill={p.color}>
+                  <title>{p.label}: {fmt(p.value)}</title>
+                </rect>
+                <text x={x + bw / 2} y={y - 6} text-anchor="middle" font-size="9" font-weight="700" fill="var(--c-muted)">{fmt(p.value)}</text>
+                <text x={x + bw / 2} y={H - 8} text-anchor="middle" font-size="9" fill="var(--c-faint)">{p.label}</text>
+              </g>
+            );
+          });
+        })()}
+      </svg>
+    </div>
+  ) : kind === 'lines' ? (
+    <div class="chart-body">
+      <svg viewBox={`0 0 ${Math.max(220, points.length * 42)} 150`} role="img" aria-label="Gráfico de líneas">
+        {(() => {
+          const W = Math.max(220, points.length * 42);
+          const H = 150;
+          const pad = 12;
+          const n = points.length;
+          const x = (i: number): number => (n > 1 ? pad + (i * (W - pad * 2)) / (n - 1) : pad);
+          const y = (v: number): number => H - 22 - (v / max) * (H - 48);
+          return (
+            <g>
+              <polyline
+                points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}
+                fill="none"
+                stroke="var(--c-primary)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              {points.map((p, i) => (
+                <g>
+                  <circle cx={x(i)} cy={y(p.value)} r="4" fill={p.color ?? 'var(--c-primary)'} stroke="#fff" stroke-width="1.5">
+                    <title>{p.label}: {fmt(p.value)}</title>
+                  </circle>
+                  <text x={x(i)} y={H - 8} text-anchor="middle" font-size="9" fill="var(--c-faint)">{p.label}</text>
+                </g>
+              ))}
+            </g>
+          );
+        })()}
+      </svg>
+    </div>
+  ) : (
+    <div class="chart-body donut-chart">
+      <div class="donut-wrap">
+        <svg viewBox="0 0 160 160" role="img" aria-label="Gráfico tipo donut">
+          {(() => {
+            const R = 60;
+            const C = 2 * Math.PI * R;
+            let acc = 0;
+            const segs = points.map((p) => {
+              const frac = sumTotal > 0 ? p.value / sumTotal : 0;
+              const seg = { ...p, frac, dash: frac * C, offset: -acc * C };
+              acc += frac;
+              return seg;
+            });
+            return (
+              <g>
+                <circle cx="80" cy="80" r={R} fill="none" stroke="var(--c-neutral-soft)" stroke-width="28" />
+                {segs.map((s) => (
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r={R}
+                    fill="none"
+                    stroke={s.color}
+                    stroke-width="28"
+                    stroke-linecap="butt"
+                    transform="rotate(-90 80 80)"
+                    stroke-dasharray={`${s.dash} ${C - s.dash}`}
+                    stroke-dashoffset={s.offset}
+                  >
+                    <title>{s.label}: {fmt(s.value)}</title>
+                  </circle>
+                ))}
+                <text x="80" y="76" text-anchor="middle" class="donut-total" font-size="15">{sumTotal}{unit}</text>
+                <text x="80" y="92" text-anchor="middle" class="donut-sub">Total</text>
+              </g>
+            );
+          })()}
+        </svg>
+      </div>
+      <ul class="chart-legend">
+        {points.map((p) => (
+          <li>
+            <span class="dot" style={`background:${p.color}`}></span>
+            {p.label}
+            <span class="legend-val">{fmt(p.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}

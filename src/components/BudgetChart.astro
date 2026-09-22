@@ -1,0 +1,89 @@
+---
+import { formatMoney } from '../lib/helpers';
+
+interface Slice {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+interface Props {
+  data: Slice[];
+  variant?: 'donut' | 'stacked';
+  totalLabel?: string;
+}
+
+const { data, variant = 'donut', totalLabel } = Astro.props as Props;
+const palette = ['#0f9d6b', '#2563eb', '#f59e0b', '#8b5cf6', '#0d9488', '#f97316'];
+const slices = data.map((d, i) => ({ ...d, color: d.color ?? palette[i % palette.length] }));
+const total = slices.reduce((s, d) => s + d.value, 0);
+
+const R = 60;
+const C = 2 * Math.PI * R;
+let acc = 0;
+const segs = slices.map((d) => {
+  const frac = total > 0 ? d.value / total : 0;
+  const seg = { ...d, frac, dash: frac * C, offset: -acc * C };
+  acc += frac;
+  return seg;
+});
+
+const pct = (n: number): string => `${Math.round(n * 100)}%`;
+---
+{variant === 'donut' ? (
+  <div class="budget-donut">
+    <div class="donut-wrap">
+      <svg viewBox="0 0 160 160" role="img" aria-label="Distribución del presupuesto">
+        <circle cx="80" cy="80" r={R} fill="none" stroke="var(--c-neutral-soft)" stroke-width="28" />
+        {segs.map((s) => (
+          <circle
+            cx="80"
+            cy="80"
+            r={R}
+            fill="none"
+            stroke={s.color}
+            stroke-width="28"
+            stroke-linecap="butt"
+            transform="rotate(-90 80 80)"
+            stroke-dasharray={`${s.dash} ${C - s.dash}`}
+            stroke-dashoffset={s.offset}
+          >
+            <title>{s.label}: {formatMoney(s.value)} · {pct(s.frac)}</title>
+          </circle>
+        ))}
+        <text x="80" y="72" text-anchor="middle" class="donut-total">{totalLabel ?? formatMoney(total)}</text>
+        <text x="80" y="90" text-anchor="middle" class="donut-sub">Total</text>
+      </svg>
+    </div>
+    <ul class="chart-legend">
+      {slices.map((s) => (
+        <li>
+          <span class="dot" style={`background:${s.color}`}></span>
+          {s.label}
+          <span class="legend-val">{formatMoney(s.value)} · {pct(s.value / total)}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+) : (
+  <div>
+    <div class="stacked-track">
+      {slices.map((s) => (
+        <span
+          class="stacked-seg"
+          style={`width:${(s.value / total) * 100}%;background:${s.color}`}
+          title={`${s.label}: ${formatMoney(s.value)} · ${pct(s.value / total)}`}
+        ></span>
+      ))}
+    </div>
+    <ul class="chart-legend">
+      {slices.map((s) => (
+        <li>
+          <span class="dot" style={`background:${s.color}`}></span>
+          {s.label}
+          <span class="legend-val">{formatMoney(s.value)} · {pct(s.value / total)}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}

@@ -1,0 +1,68 @@
+---
+import '../styles/global.css';
+import { proyecto } from '../data/proyecto';
+
+const features = [
+  'Analítica de campañas',
+  'Clientes y fidelización',
+  'IA y análisis predictivo',
+  'Estrategias omnicanal',
+  'Presupuesto por objetivo',
+  'Seguimiento de riesgos',
+];
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={`${proyecto.sistema} · ${proyecto.modulo}`} />
+    <title>{proyecto.sistema} · {proyecto.modulo}</title>
+  </head>
+  <body class="landing-page">
+    <div class="landing">
+      <nav class="landing-nav">
+        <div class="landing-brand">
+          <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.35)">
+            N
+          </div>
+          <div>
+            <strong>{proyecto.organizacion}</strong>
+            <div style="font-size:.76rem;color:#7c8ba1;font-weight:400">{proyecto.sistema}</div>
+          </div>
+        </div>
+        <span style="font-size:.78rem;color:#7c8ba1">Proyecto académico · Gestión de proyectos</span>
+      </nav>
+
+      <main class="landing-hero">
+        <div class="landing-hero-inner">
+          <div class="landing-kicker">Panel de seguimiento · {proyecto.modulo}</div>
+          <h1>{proyecto.sistema}</h1>
+          <h2>Dashboard de Marketing</h2>
+          <p>
+            Seguimiento del módulo de Marketing: objetivos, actividades, presupuesto, riesgos,
+            stakeholders, entregables, cronograma y analítica de Marketing para {proyecto.cliente}.
+          </p>
+          <div class="landing-features">
+            {features.map((f) => <span>{f}</span>)}
+          </div>
+          <a class="landing-cta" href="/dashboard">
+            Entrar al Dashboard
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+          </a>
+        </div>
+      </main>
+
+      <footer class="landing-footer">
+        <span>© 2026 {proyecto.organizacion}</span>
+        <span>Responsable del módulo: {proyecto.responsable}</span>
+        <span>Ventana del módulo: 15/08/2026 → 12/09/2026</span>
+      </footer>
+    </div>
+  </body>
+</html>
