@@ -1,0 +1,242 @@
+---
+import StatusBadge from '../../../components/StatusBadge.astro';
+import DesviacionPill from '../../../components/DesviacionPill.astro';
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
+import { equipoPrincipal } from '../../../data/participantes';
+import { actividades } from '../../../data/actividades';
+import {
+  formatPorcentaje,
+  getActividadesPorObjetivo,
+  getPorcentajeParticipacion,
+  getResumenParticipante,
+} from '../../../lib/participacion';
+import { formatDate, formatMoney, getObjetivo } from '../../../lib/helpers';
+import { FECHA_CORTE, getAvanceProgramado, getAvanceProgramadoObjetivo } from '../../../lib/progreso';
+import { getDesviacionObjetivo, getDesviacionParticipante } from '../../../lib/desviacion';
+
+export function getStaticPaths() {
+  return equipoPrincipal.map((p) => ({ params: { id: String(p.id) } }));
+}
+
+const { id } = Astro.params as { id: string };
+const resumen = getResumenParticipante(Number(id));
+
+if (!resumen) {
+  throw new Error(`Integrante ${id} no encontrado`);
+}
+
+const { participante } = resumen;
+const totalActividades = actividades.length;
+
+const porObjetivo = [...resumen.objetivos]
+  .sort((a, b) => a - b)
+  .flatMap((objetivoId) => {
+    const objetivo = getObjetivo(objetivoId);
+    if (!objetivo) return [];
+    const propias = getActividadesPorObjetivo(objetivoId)
+      .filter((a) => getPorcentajeParticipacion(a.id, participante.id) > 0)
+      .map((a) => ({ ...a, porcentaje: getPorcentajeParticipacion(a.id, participante.id) }));
+    return [{ objetivo, actividades: propias, total: propias.length }];
+  });
+
+const totalPresupuesto = porObjetivo.reduce(
+  (s, o) => s + o.actividades.reduce((x, a) => x + a.presupuesto, 0),
+  0,
+);
+---
+<DashboardLayout
+  title={participante.nombre}
+  subtitle={`Detalle de participación · ${participante.tipo === 'equipo' ? 'Integrante del equipo principal' : 'Participante externo'}`}
+>
+  <section style="margin-bottom:16px">
+    <a class="btn btn-ghost" href="/dashboard/equipo">← Volver al equipo</a>
+  </section>
+
+  <section>
+    <div class="card">
+      <div class="objetivo-hero">
+        <div class="objetivo-hero-num">{participante.iniciales}</div>
+        <div style="flex:1;min-width:0">
+          <h2 class="objetivo-hero-title">{participante.nombre}</h2>
+          <div class="objetivo-hero-badges">
+            <StatusBadge status={participante.tipo === 'equipo' ? 'Equipo principal' : 'Participante externo'} />
+            <span class="objective-note">
+              Avance real: {resumen.avanceReal === null ? 'no calculado' : `${resumen.avanceReal} %`}{' '}
+              (reportado en {resumen.coberturaAvance.reportadas} de {resumen.coberturaAvance.total}{' '}
+              actividades). Avance programado: {formatPorcentaje(resumen.avanceProgramado)} (cronograma al{' '}
+              {FECHA_CORTE}).
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-cell">
+          <span class="metric-k">Participación general</span>
+          <span class="metric-v">{formatPorcentaje(resumen.participacionGeneral)}</span>
+          <span class="metric-note">Promedio sobre las {totalActividades} actividades</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Avance programado</span>
+          <span class="metric-v">{formatPorcentaje(resumen.avanceProgramado)}</span>
+          <span class="metric-note">Cronograma al {FECHA_CORTE}, no ejecución</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Avance real</span>
+          <span class="metric-v">
+            {resumen.avanceReal === null ? 'No calculado' : `${resumen.avanceReal} %`}
+          </span>
+          <span class="metric-note">
+            {resumen.coberturaAvance.reportadas} de {resumen.coberturaAvance.total} actividades con dato
+          </span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Desviación</span>
+          <span class="metric-v">
+            <DesviacionPill desviacion={getDesviacionParticipante(participante.id)} />
+          </span>
+          <span class="metric-note">Avance real − avance programado</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Actividades asignadas</span>
+          <span class="metric-v">{resumen.actividadesAsignadas}</span>
+          <span class="metric-note">Con participación mayor a 0 %</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Actividades compartidas</span>
+          <span class="metric-v">{resumen.actividadesCompartidas}</span>
+          <span class="metric-note">Con al menos otro participante</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Objetivos</span>
+          <span class="metric-v">{resumen.objetivos.length}</span>
+          <span class="metric-note">De 5 objetivos del módulo</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Presupuesto asociado</span>
+          <span class="metric-v">{formatMoney(totalPresupuesto)}</span>
+          <span class="metric-note">Suma de sus actividades (no es distribución de costo)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Participación por objetivo</h2>
+    </div>
+    <div class="card">
+      <p class="card-sub">
+        Participación promedio = suma de sus porcentajes en las actividades del objetivo ÷ número de
+        actividades del objetivo.
+      </p>
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+              <tr>
+                <th>Objetivo</th>
+                <th class="table-num">Participación promedio</th>
+                <th class="table-num">Avance prog.</th>
+                <th class="table-num">Desviación</th>
+                <th class="table-num">Actividades</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumen.participacionPorObjetivo.map((p) => {
+                const objetivo = getObjetivo(p.objetivoId);
+                return (
+                  <tr>
+                    <td>
+                      <a class="table-link" href={`/objetivos/${p.objetivoId}`}>
+                        Objetivo {objetivo?.numero}: {objetivo?.nombre}
+                      </a>
+                    </td>
+                    <td class="table-num">{formatPorcentaje(p.porcentaje)}</td>
+                    <td class="table-num">{formatPorcentaje(getAvanceProgramadoObjetivo(p.objetivoId))}</td>
+                    <td class="table-num">
+                      <DesviacionPill compact desviacion={getDesviacionObjetivo(p.objetivoId)} />
+                    </td>
+                    <td class="table-num">
+                      {
+                        getActividadesPorObjetivo(p.objetivoId).filter(
+                          (a) => getPorcentajeParticipacion(a.id, participante.id) > 0,
+                        ).length
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p class="prog-note">
+          Avance prog.: tiempo planificado consumido hasta la fecha de corte ({FECHA_CORTE}); es
+          calendario, no ejecución. Desviación: avance real del objetivo menos su avance programado;
+          "—" significa que no hay avance real reportado.
+        </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Actividades por objetivo</h2>
+      <a class="as-link" href="/dashboard/actividades">Todas las actividades →
+      </a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      {porObjetivo.map(({ objetivo, actividades: acts, total }) => (
+        <div class="card">
+          <div class="section-title" style="margin-bottom:8px">
+            <h3>
+              <a class="table-link" href={`/objetivos/${objetivo.id}`}>Objetivo {objetivo.numero}</a>
+            </h3>
+            <span class="table-muted">{objetivo.nombre}</span>
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Actividad</th>
+                  <th class="table-num">Participación</th>
+                  <th class="table-num">Avance real</th>
+                  <th class="table-num">Avance prog.</th>
+                  <th class="table-num">Presupuesto</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {acts.map((a) => (
+                  <tr>
+                    <td>
+                      <a class="table-link" href={`/actividades/${a.id}`}>{a.nombre}</a>
+                      <span class="table-muted" style="display:block;font-size:.76rem">
+                        {formatDate(a.fechaInicio)} → {formatDate(a.fechaFinal)}
+                      </span>
+                    </td>
+                    <td class="table-num"><strong>{formatPorcentaje(a.porcentaje)}</strong></td>
+                    <td class="table-num">
+                      {typeof a.avance === 'number' ? `${a.avance} %` : 'No calculado'}
+                    </td>
+                    <td class="table-num">{formatPorcentaje(getAvanceProgramado(a))}</td>
+                    <td class="table-num">{formatMoney(a.presupuesto)}</td>
+                    <td><StatusBadge status={a.estado ?? 'Sin estado registrado'} /></td>
+                  </tr>
+                ))}
+                {acts.length === 0 && (
+                  <tr>
+                    <td class="empty-cell" colspan={6}>
+                      <div class="empty-state">Sin actividades asignadas en este objetivo.</div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p class="table-muted" style="font-size:.8rem;margin-top:10px">
+            {total} {total === 1 ? 'actividad' : 'actividades'} con participación de {participante.nombreCorto}
+          </p>
+        </div>
+      ))}
+    </div>
+  </section>
+</DashboardLayout>

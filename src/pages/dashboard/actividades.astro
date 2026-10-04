@@ -1,29 +1,78 @@
 ---
 import ActivityTable from '../../components/ActivityTable.astro';
-import DemoBadge from '../../components/DemoBadge.astro';
 import StatCard from '../../components/StatCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { actividades } from '../../data/actividades';
+import { getPresupuestoTotal } from '../../data/presupuesto';
+import {
+  formatPorcentaje,
+  getAvanceCalculado,
+  getContadorEstadosGlobal,
+  getCoberturaAvanceReal,
+} from '../../lib/participacion';
+import { formatMoney } from '../../lib/helpers';
+import { FECHA_CORTE, getAvanceProgramadoGlobal } from '../../lib/progreso';
 
 const total = actividades.length;
-const enProceso = actividades.filter((a) => a.estado === 'En proceso').length;
-const completadas = actividades.filter((a) => a.estado === 'Completada').length;
-const retrasadas = actividades.filter((a) => a.estado === 'Retrasada').length;
-const noIniciadas = actividades.filter((a) => a.estado === 'No iniciada').length;
+const estados = getContadorEstadosGlobal();
+const presupuesto = getPresupuestoTotal();
+const avanceReal = getAvanceCalculado(actividades);
+const cobertura = getCoberturaAvanceReal(actividades);
+const avanceProgramado = getAvanceProgramadoGlobal();
 ---
 <DashboardLayout
   title="Actividades del módulo"
-  subtitle="Todas las actividades planificadas para el módulo de Marketing, con filtros por objetivo, estado y responsable."
+  subtitle="Actividades con sus participantes, porcentaje de participación, presupuesto y estado."
 >
   <section style="margin-bottom:20px">
     <div class="grid grid-4">
       <StatCard title="Total de actividades" value={total} icon="list" tone="neutral" caption="Planificadas para el módulo" />
-      <StatCard title="En proceso" value={enProceso} icon="list" tone="info" caption="En ejecución actualmente" />
-      <StatCard title="No iniciadas" value={noIniciadas} icon="list" tone="warning" caption="Pendientes de inicio" />
-      <StatCard title="Completadas" value={completadas} icon="list" tone="success" caption={retrasadas ? `Retrasadas: ${retrasadas}` : 'Sin retrasos reportados'} />
+      <StatCard
+        title="En proceso"
+        value={estados.enProceso}
+        icon="list"
+        tone="info"
+        caption={estados.retrasadas ? `${estados.retrasadas} retrasadas` : 'Con estado "En proceso"'}
+      />
+      <StatCard
+        title="No iniciadas"
+        value={estados.pendientes}
+        icon="list"
+        tone="warning"
+        caption="Con estado pendiente"
+      />
+      <StatCard
+        title="Completadas"
+        value={estados.completadas}
+        icon="list"
+        tone="success"
+        caption={`Sin estado registrado: ${estados.sinEstado}`}
+      />
     </div>
-    <div style="margin-top:10px">
-      <DemoBadge text="Avances demo" tip="Los porcentajes de avance son datos de demostración." />
+    <div class="grid grid-2" style="margin-top:16px">
+      <StatCard
+        title="Presupuesto total"
+        value={formatMoney(presupuesto)}
+        icon="coins"
+        tone="primary"
+        to="/dashboard/presupuesto"
+        caption="Suma de los cinco objetivos"
+      />
+      <StatCard
+        title="Avance real"
+        value={avanceReal === null ? 'No calculado' : `${avanceReal} %`}
+        icon="gauge"
+        tone={avanceReal === null ? 'neutral' : 'success'}
+        to="/dashboard/avance"
+        caption={`Reportado en ${cobertura.reportadas} de ${total} actividades`}
+      />
+      <StatCard
+        title="Avance programado"
+        value={formatPorcentaje(avanceProgramado)}
+        icon="calendar"
+        tone="primary"
+        caption={`Cronograma al ${FECHA_CORTE} (calendario, no ejecución)`}
+      />
     </div>
   </section>
 

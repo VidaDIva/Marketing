@@ -1,21 +1,30 @@
 ---
 import DataTable from '../../components/DataTable.astro';
-import DemoBadge from '../../components/DemoBadge.astro';
+import ParticipationBars from '../../components/ParticipationBars.astro';
 import ProgressBar from '../../components/ProgressBar.astro';
 import RiskCard from '../../components/RiskCard.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
+import Timeline from '../../components/Timeline.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { objetivos } from '../../data/objetivos';
-import { getPresupuestoObjetivo } from '../../data/presupuesto';
+import { getDesglosePresupuesto, getPorcentajeDelTotal } from '../../data/presupuesto';
 import {
   daysBetween,
   formatDate,
   formatMoney,
-  getActividadesPorObjetivo,
   getEntregablesPorObjetivo,
   getObjetivo,
   getRiesgosPorObjetivo,
 } from '../../lib/helpers';
+import {
+  formatPorcentaje,
+  getActividadesPorObjetivo,
+  getParticipantesActividad,
+  getResumenObjetivo,
+} from '../../lib/participacion';
+import { FECHA_CORTE, getAvanceProgramado } from '../../lib/progreso';
+import { getDesviacionObjetivo } from '../../lib/desviacion';
+import DesviacionPill from '../../components/DesviacionPill.astro';
 
 export function getStaticPaths() {
   return objetivos.map((o) => ({ params: { id: String(o.id) } }));
@@ -28,21 +37,29 @@ if (!objetivo) {
   throw new Error(`Objetivo ${id} no encontrado`);
 }
 
+const resumen = getResumenObjetivo(objetivo.id);
 const actividadesObj = getActividadesPorObjetivo(objetivo.id);
 const riesgosObj = getRiesgosPorObjetivo(objetivo.id);
 const entregablesObj = getEntregablesPorObjetivo(objetivo.id);
-const presupuesto = getPresupuestoObjetivo(objetivo.id);
+const desglose = getDesglosePresupuesto(objetivo.id);
+const avance = resumen.avanceReal;
+const cobertura = resumen.coberturaAvance;
+const desviacion = getDesviacionObjetivo(objetivo.id);
+const { estados } = resumen;
 
-const rowsActividades = actividadesObj.map((a) => ({
-  id: `A${String(a.id).padStart(2, '0')}`,
-  nombre: a.nombre,
-  responsable: a.responsable,
-  inicio: formatDate(a.fechaInicio),
-  final: formatDate(a.fechaFinal),
-  estado: a.estado,
-  avance: `${a.avance}%`,
-  idNum: a.id,
-}));
+const rowsActividades = actividadesObj.map((a) => {
+  const partes = getParticipantesActividad(a.id);
+  return {
+    nombre: a.nombre,
+    participantes: partes.map((p) => p.participante.nombreCorto).join(' · '),
+    participacion: partes.map((p) => `${p.participante.nombreCorto} ${formatPorcentaje(p.porcentaje)}`).join(' · '),
+    avanceReal: typeof a.avance === 'number' ? `${a.avance} %` : 'No calculado',
+    avanceProg: formatPorcentaje(getAvanceProgramado(a)),
+    presupuesto: formatMoney(a.presupuesto),
+    estado: a.estado ?? 'Sin estado registrado',
+    idNum: a.id,
+  };
+});
 ---
 <DashboardLayout
   title={`Objetivo ${objetivo.numero}`}
@@ -55,18 +72,50 @@ const rowsActividades = actividadesObj.map((a) => ({
         <div style="flex:1;min-width:0">
           <h2 class="objetivo-hero-title">{objetivo.nombre}</h2>
           <div class="objetivo-hero-badges">
-            <StatusBadge status={objetivo.estado} />
+            <StatusBadge status={resumen.estado} />
             <span class="risk-id">Riesgo:</span>
             <StatusBadge status={objetivo.riesgoNivel} />
-            <DemoBadge text="Avance demo" tip="El porcentaje de avance es un dato de demostración." />
+            <span class="objective-note">
+              Avance real: {avance === null ? 'no calculado' : `${avance} %`} ({cobertura.reportadas} de{' '}
+              {cobertura.total} actividades) · Avance programado:{' '}
+              {formatPorcentaje(resumen.avanceProgramado)}
+            </span>
           </div>
           <p class="risk-detail" style="margin-top:10px">{objetivo.descripcion}</p>
         </div>
       </div>
 
-      <div class="meta-list" style="margin-top:4px">
+      <div class="metric-row">
+        <div class="metric-cell">
+          <span class="metric-k">Presupuesto</span>
+          <span class="metric-v">{formatMoney(resumen.presupuesto)}</span>
+          <span class="metric-note">{getPorcentajeDelTotal(objetivo.id)} % del total del módulo</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Actividades</span>
+          <span class="metric-v">{resumen.totalActividades}</span>
+          <span class="metric-note">Definidas en el proyecto</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Completadas</span>
+          <span class="metric-v">{estados.completadas}</span>
+          <span class="metric-note">Con estado "Completada"</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">En proceso</span>
+          <span class="metric-v">{estados.enProceso + estados.retrasadas}</span>
+          <span class="metric-note">En proceso o retrasadas</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-k">Pendientes</span>
+          <span class="metric-v">{estados.pendientes}</span>
+          <span class="metric-note">No iniciadas</span>
+        </div>
+      </div>
+
+      <div class="meta-list" style="margin-top:18px">
         <div class="meta-row">
-          <span class="meta-k">Responsable</span>
+          <span class="meta-k">Responsable del módulo</span>
           <span class="meta-v">{objetivo.responsable}</span>
         </div>
         <div class="meta-row">
@@ -74,34 +123,122 @@ const rowsActividades = actividadesObj.map((a) => ({
           <span class="meta-v">{formatDate(objetivo.fechaInicio)} → {formatDate(objetivo.fechaFinal)} ({daysBetween(objetivo.fechaInicio, objetivo.fechaFinal)} días)</span>
         </div>
         <div class="meta-row">
-          <span class="meta-k">Avance actual</span>
-          <span style="flex:1;max-width:340px"><ProgressBar value={objetivo.avance} tone="auto" /></span>
+          <span class="meta-k">Avance real</span>
+          <span class="meta-v">
+            {avance === null
+              ? 'No calculado (ninguna actividad tiene avance reportado)'
+              : `${avance} % (${cobertura.reportadas} de ${cobertura.total} actividades)`}
+          </span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Avance programado (cronograma)</span>
+          <span class="meta-v">{formatPorcentaje(resumen.avanceProgramado)} al {FECHA_CORTE}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-k">Desviación (real − programado)</span>
+          <span class="meta-v"><DesviacionPill desviacion={desviacion} /></span>
         </div>
       </div>
     </div>
   </section>
 
   <section class="section" style="margin-top:0">
-    <div class="grid grid-4">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Avance programado vs. avance real</h3>
+        <p class="card-sub">
+          Comparación de la medida de calendario con el dato de ejecución del proyecto.
+        </p>
+        <div class="prog-dual">
+          <div class="prog-dual-item">
+            <span class="prog-dual-k">Avance programado (cronograma)</span>
+            <ProgressBar
+              value={resumen.avanceProgramado}
+              prefix="Avance programado"
+              decimals={2}
+              tone="warning"
+            />
+            <span class="metric-note">
+              Tiempo planificado consumido hasta {FECHA_CORTE}. Indica calendario, no trabajo hecho.
+            </span>
+          </div>
+          <div class="prog-dual-item">
+            <span class="prog-dual-k">Avance real (ejecución)</span>
+            {avance === null ? (
+              <div class="prog-empty">
+                No calculado: ninguna de las {cobertura.total} actividades tiene avance reportado.
+              </div>
+            ) : (
+              <ProgressBar value={avance} prefix="Avance real" decimals={2} tone="success" />
+            )}
+            <span class="metric-note">
+              Reportado en {cobertura.reportadas} de {cobertura.total} actividades ·{' '}
+              {estados.sinEstado} sin estado registrado.
+            </span>
+          </div>
+          <div class="prog-dual-item">
+            <span class="prog-dual-k">Desviación</span>
+            <div style="margin:.4rem 0">
+              <DesviacionPill desviacion={desviacion} />
+            </div>
+            <span class="metric-note">
+              Avance real menos avance programado, en puntos porcentuales (mismas actividades
+              reportadas).
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Participación del equipo</h3>
+        <p class="card-sub">
+          Participación promedio dentro del objetivo = suma de sus porcentajes ÷ {resumen.totalActividades} actividades.
+        </p>
+        <ParticipationBars items={resumen.participacionEquipo} />
+        <p class="table-muted" style="font-size:.8rem;margin-top:12px">
+          La participación indica cuánto de cada actividad corresponde a cada integrante; no es
+          avance ni altera el presupuesto.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="card">
+      <h3>Participantes externos</h3>
+      <p class="card-sub">Consultores y participantes externos del objetivo.</p>
+      <ParticipationBars items={resumen.participacionExternos} showBar={true} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="grid grid-3">
       <div class="card">
         <h3>Presupuesto del objetivo</h3>
-        <p class="card-sub">Total oficial · ejecutado DEMO</p>
-        <div style="font-size:1.4rem;font-weight:800">{presupuesto ? formatMoney(presupuesto.total) : '-'}</div>
-        {presupuesto && (
-          <div class="meta-list" style="margin-top:12px">
-            <div class="meta-row"><span class="meta-k">Ejecutado (demo)</span><span class="meta-v text-success">{formatMoney(presupuesto.ejecutado)}</span></div>
-            <div class="meta-row"><span class="meta-k">Pendiente (demo)</span><span class="meta-v">{formatMoney(presupuesto.pendiente)}</span></div>
-            <div class="meta-row"><span class="meta-k">Ejecución</span><span class="meta-v">{presupuesto.porcentajeEjecucion}%</span></div>
+        <p class="card-sub">Total calculado sumando sus actividades</p>
+        <div style="font-size:1.4rem;font-weight:800">{formatMoney(desglose.total)}</div>
+        <div class="meta-list" style="margin-top:12px">
+          <div class="meta-row">
+            <span class="meta-k">Actividades con presupuesto</span>
+            <span class="meta-v">{desglose.lineas.length}</span>
           </div>
-        )}
+          <div class="meta-row">
+            <span class="meta-k">% del total del módulo</span>
+            <span class="meta-v">{getPorcentajeDelTotal(objetivo.id)} %</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-k">Ejecutado</span>
+            <span class="meta-v">No disponible</span>
+          </div>
+        </div>
         <div style="margin-top:12px"><a class="btn btn-ghost" href="/dashboard/presupuesto">Ver presupuesto →</a></div>
       </div>
 
       <div class="card">
         <h3>Entregables</h3>
-        <p class="card-sub">Asociados a este objetivo</p>
+        <p class="card-sub">Productos y documentos asociados</p>
         {entregablesObj.length === 0 ? (
-          <div class="empty-state">Sin entregables asociados (entregable general del proyecto).</div>
+          <div class="empty-state">Sin entregables asociados a este objetivo.</div>
         ) : (
           <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
             {entregablesObj.map((e) => (
@@ -112,50 +249,94 @@ const rowsActividades = actividadesObj.map((a) => ({
             ))}
           </div>
         )}
+        <div style="margin-top:12px"><a class="btn btn-ghost" href="/dashboard/entregables">Ver entregables →</a></div>
       </div>
 
       <div class="card">
-        <h3>Riesgos (demo)</h3>
-        <p class="card-sub">Riesgos del objetivo</p>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-          {riesgosObj.map((r) => <RiskCard riesgo={r} showMitigacion={false} />)}
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Cronograma</h3>
-        <p class="card-sub">Ventana dentro del módulo</p>
-        <div class="meta-list" style="margin-top:8px">
-          <div class="meta-row"><span class="meta-k">Inicio</span><span class="meta-v">{formatDate(objetivo.fechaInicio)}</span></div>
-          <div class="meta-row"><span class="meta-k">Final</span><span class="meta-v">{formatDate(objetivo.fechaFinal)}</span></div>
-          <div class="meta-row"><span class="meta-k">Duración</span><span class="meta-v">{daysBetween(objetivo.fechaInicio, objetivo.fechaFinal)} días</span></div>
-          <div class="meta-row"><span class="meta-k">Actividades</span><span class="meta-v">{actividadesObj.length}</span></div>
-        </div>
-        <div style="margin-top:14px"><a class="btn btn-ghost" href="/dashboard/cronograma">Ver cronograma →</a></div>
+        <h3>Riesgos del objetivo</h3>
+        <p class="card-sub">Riesgos identificados en el objetivo</p>
+        {riesgosObj.length === 0 ? (
+          <div class="empty-state">Sin riesgos registrados.</div>
+        ) : (
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            {riesgosObj.map((r) => <RiskCard riesgo={r} showMitigacion={false} />)}
+          </div>
+        )}
+        <div style="margin-top:12px"><a class="btn btn-ghost" href="/dashboard/riesgos">Ver riesgos →</a></div>
       </div>
     </div>
   </section>
 
   <section class="section">
     <div class="section-title">
-      <h2>Actividades relacionadas</h2>
+      <h2>Cronograma del objetivo</h2>
+      <span class="table-muted">
+        Ventana: {formatDate(objetivo.fechaInicio)} → {formatDate(objetivo.fechaFinal)}
+      </span>
+    </div>
+    <Timeline
+      items={actividadesObj.map((a) => ({
+        id: a.id,
+        nombre: a.nombre,
+        objetivoId: a.objetivoId,
+        fechaInicio: a.fechaInicio,
+        fechaFinal: a.fechaFinal,
+        estado: a.estado ?? 'Sin estado registrado',
+        avance: a.avance,
+      }))}
+      inicio={objetivo.fechaInicio}
+      fin={objetivo.fechaFinal}
+      etiquetaInicio={`Inicio del objetivo ${objetivo.numero}`}
+      etiquetaFin={`Cierre del objetivo ${objetivo.numero}`}
+    />
+    <p class="card-sub" style="margin-top:10px">
+      Fechas derivadas de la ventana del objetivo (reparto secuencial). El avance real se muestra en
+      las barras cuando el equipo lo ha reportado; la barra naranja es el avance programado (calendario).
+    </p>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Desglose del presupuesto</h2>
+      <span class="table-muted">Total: {formatMoney(desglose.total)}</span>
+    </div>
+    <DataTable
+      columns={[
+        { label: 'Actividad', key: 'nombre' },
+        { label: 'Presupuesto', key: 'presupuesto', align: 'right' },
+      ]}
+      rows={desglose.lineas.map((l) => ({ nombre: l.nombre, presupuesto: formatMoney(l.presupuesto), idNum: l.id }))}
+      link={(row) => `/actividades/${(row as any).idNum}`}
+      searchable={false}
+      empty="Este objetivo no tiene actividades con presupuesto."
+    />
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Actividades del objetivo</h2>
       <a class="as-link" href="/dashboard/actividades">Todas las actividades →
       </a>
     </div>
     <DataTable
       columns={[
         { label: 'Actividad', key: 'nombre' },
-        { label: 'ID', key: 'id' },
-        { label: 'Responsable', key: 'responsable' },
-        { label: 'Inicio', key: 'inicio' },
-        { label: 'Final', key: 'final' },
+        { label: 'Participantes', key: 'participantes' },
+        { label: 'Participación', key: 'participacion' },
+        { label: 'Avance real', key: 'avanceReal', align: 'right' },
+        { label: 'Avance prog.', key: 'avanceProg', align: 'right' },
+        { label: 'Presupuesto', key: 'presupuesto', align: 'right' },
         { label: 'Estado', key: 'estado', badge: true },
-        { label: 'Avance', key: 'avance' },
       ]}
       rows={rowsActividades}
       link={(row) => `/actividades/${(row as any).idNum}`}
       searchable={false}
       empty="Este objetivo no tiene actividades asociadas."
     />
+    <p class="prog-note">
+      Avance real: dato reportado por el equipo; "No calculado" = sin dato (no 0 %). Avance prog.:
+      tiempo planificado consumido hasta la fecha de corte ({FECHA_CORTE}); es calendario, no
+      ejecución.
+    </p>
   </section>
 </DashboardLayout>

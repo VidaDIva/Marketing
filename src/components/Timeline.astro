@@ -8,7 +8,13 @@ interface GanttItem {
   fechaInicio: string;
   fechaFinal: string;
   estado: string;
-  avance: number;
+  /** Avance real. Opcional: si no existe, la barra no muestra porcentaje. */
+  avance?: number;
+  /**
+   * Avance PROGRAMADO (cronograma) a la fecha de corte, 0-100.
+   * Se dibuja como relleno interior de la barra: es calendario, no ejecución.
+   */
+  avanceProgramado?: number;
 }
 
 interface Props {
@@ -21,29 +27,62 @@ interface Props {
 
 const { items, inicio, fin, etiquetaInicio = 'Inicio del módulo', etiquetaFin = 'Fin del módulo' } = Astro.props as Props;
 const span = dayOffset(inicio, fin);
+const safeSpan = Math.max(1, span);
 
 const rows = items.map((it) => {
   const startOff = Math.max(0, dayOffset(inicio, it.fechaInicio));
-  const endOff = Math.min(span, dayOffset(inicio, it.fechaFinal));
-  const left = (startOff / span) * 100;
-  const width = Math.max(((endOff - startOff) / span) * 100, 2.5);
+  const endOff = Math.min(safeSpan, dayOffset(inicio, it.fechaFinal));
+  const left = (startOff / safeSpan) * 100;
+  const width = Math.max(((endOff - startOff) / safeSpan) * 100, 2.5);
   return { ...it, left, width };
 });
 
 const gridlines: number[] = [];
-for (let d = 0; d <= span; d += 6) gridlines.push((d / span) * 100);
+for (let d = 0; d <= span; d += 6) gridlines.push((d / safeSpan) * 100);
 
-const sepSept = dayOffset(inicio, '2026-09-01');
-const pctAgosto = (sepSept / span) * 100;
-const barClass = (estado: string): string => `bar-${estado.split(' ')[0]}`;
+/**
+ * Escala de meses calculada sobre la ventana que recibe el componente, no con
+ * una fecha fija: así funciona igual para el módulo completo (ago–sep) que para
+ * un objetivo que ocurre dentro de un solo mes.
+ */
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const nombreMes = (iso: string): string => {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${MESES[d.getMonth()]} ${d.getFullYear()}`;
+};
+const primerDiaMesSiguiente = (() => {
+  const d = new Date(`${inicio}T00:00:00`);
+  d.setDate(1);
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+})();
+const offsetCorte = dayOffset(inicio, primerDiaMesSiguiente);
+const hayCorteDeMes = inicio.slice(0, 7) !== fin.slice(0, 7) && offsetCorte > 0 && offsetCorte < span;
+const pctPrimerMes = hayCorteDeMes ? (offsetCorte / safeSpan) * 100 : 100;
+
+const barClass = (estado: string): string => {
+  if (estado === 'Completada') return 'bar-Completada';
+  if (estado === 'En proceso') return 'bar-En';
+  if (estado === 'Retrasada') return 'bar-Retrasada';
+  if (estado === 'No iniciada') return 'bar-No';
+  return 'bar-Sin';
+};
 ---
 <div class="card">
   <div class="gantt" aria-label="Cronograma en formato Gantt">
     <div class="gantt-scale">
       <div class="gantt-label-head">Actividad</div>
       <div class="gantt-scale-track">
-        <span style={`width:${pctAgosto}%`}>Agosto · {etiquetaInicio}</span>
-        <span style={`width:${100 - pctAgosto}%`}>Septiembre · {etiquetaFin}</span>
+        {hayCorteDeMes ? (
+          <>
+            <span style={`width:${pctPrimerMes}%`}>{nombreMes(inicio)} · {etiquetaInicio}</span>
+            <span style={`width:${100 - pctPrimerMes}%`}>{nombreMes(fin)} · {etiquetaFin}</span>
+          </>
+        ) : (
+          <span style="width:100%">
+            {nombreMes(inicio)} · {etiquetaInicio} → {etiquetaFin}
+          </span>
+        )}
       </div>
     </div>
     {rows.map((r) => (
@@ -62,9 +101,16 @@ const barClass = (estado: string): string => `bar-${estado.split(' ')[0]}`;
           <div
             class={`gantt-bar ${barClass(r.estado)}`}
             style={`left:${r.left}%;width:${r.width}%`}
-            title={`${r.nombre} · ${formatDate(r.fechaInicio)} → ${formatDate(r.fechaFinal)} · ${r.estado} · Avance ${r.avance}%`}
+            title={`${r.nombre} · ${formatDate(r.fechaInicio)} → ${formatDate(r.fechaFinal)} · ${r.estado}${typeof r.avance === 'number' ? ` · Avance real ${r.avance}%` : ' · Avance real no calculado'}${typeof r.avanceProgramado === 'number' ? ` · Avance programado ${r.avanceProgramado}%` : ''}`}
           >
-            {r.avance > 0 ? `${r.avance}%` : ''}
+            {typeof r.avanceProgramado === 'number' && r.avanceProgramado > 0 && (
+              <span
+                class="gantt-prog"
+                style={`width:${r.avanceProgramado}%`}
+                aria-hidden="true"
+              ></span>
+            )}
+            {typeof r.avance === 'number' && r.avance > 0 ? `${r.avance}%` : ''}
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import DemoBadge from '../../components/DemoBadge.astro';
 import StatCard from '../../components/StatCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { entregables } from '../../data/entregables';
-import { formatDate, getObjetivo } from '../../lib/helpers';
+import { formatDate, getObjetivo, uniqueValues } from '../../lib/helpers';
 
 const total = entregables.length;
 const completados = entregables.filter((e) => e.estado === 'Completado').length;
@@ -49,8 +49,8 @@ const tableRows = entregables.map((e) => {
     ]}
     rows={tableRows}
     filters={[
-      { label: 'Estado', col: 'estado', options: ['Pendiente', 'En proceso', 'Completado'] },
-      { label: 'Objetivo', col: 'objetivo', options: ['General', 'Objetivo 1', 'Objetivo 2', 'Objetivo 3', 'Objetivo 4', 'Objetivo 5'] },
+      { label: 'Estado', col: 'estado', options: uniqueValues(tableRows, (r) => r.estado) },
+      { label: 'Objetivo', col: 'objetivo', options: uniqueValues(tableRows, (r) => r.objetivo) },
     ]}
     empty="No hay entregables registrados."
   />

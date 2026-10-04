@@ -3,9 +3,13 @@ interface Props {
   value: number;
   tone?: 'auto' | 'success' | 'info' | 'warning' | 'danger';
   showLabel?: boolean;
+  /** Texto accesible y nombre de la métrica: "Avance", "Participación"... */
+  prefix?: string;
+  /** Formato del número mostrado: 1 decimal, enteros, etc. */
+  decimals?: number;
 }
 
-const { value, tone = 'auto', showLabel = true } = Astro.props as Props;
+const { value, tone = 'auto', showLabel = true, prefix = 'Avance', decimals = 0 } = Astro.props as Props;
 const clamped = Math.max(0, Math.min(100, value));
 const toneClass =
   tone === 'auto'
@@ -17,10 +21,16 @@ const toneClass =
           ? 'progress--warning'
           : 'progress--danger'
     : `progress--${tone}`;
+const etiqueta = `${redondear(clamped, decimals).toFixed(decimals)} %`;
+
+function redondear(n: number, d: number): number {
+  const f = 10 ** d;
+  return Math.round(n * f) / f;
+}
 ---
 <div class="progress-wrap">
-  <div class="progress" role="progressbar" aria-valuenow={clamped} aria-valuemin="0" aria-valuemax="100" aria-label={`Avance ${clamped}%`}>
+  <div class="progress" role="progressbar" aria-valuenow={clamped} aria-valuemin="0" aria-valuemax="100" aria-label={`${prefix} ${etiqueta}`}>
     <div class={`progress-fill ${toneClass}`} style={`width:${clamped}%`}></div>
   </div>
-  {showLabel && <span class="progress-label">{clamped}%</span>}
+  {showLabel && <span class="progress-label">{etiqueta}</span>}
 </div>

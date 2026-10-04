@@ -1,0 +1,122 @@
+---
+import type { ResumenParticipante } from '../lib/participacion';
+import { formatPorcentaje } from '../lib/participacion';
+import { FECHA_CORTE } from '../lib/progreso';
+import ProgressBar from './ProgressBar.astro';
+
+interface Props {
+  resumenes: ResumenParticipante[];
+  title?: string;
+  to?: string;
+  cta?: string;
+  compact?: boolean;
+  /** Actividades del módulo que tienen al menos un integrante del equipo principal. */
+  conEquipo?: number;
+  /** Actividades del módulo con más de un participante. */
+  compartidas?: number;
+  /** Total de actividades del módulo. */
+  totalActividades?: number;
+}
+
+const {
+  resumenes,
+  title,
+  to,
+  cta,
+  compact = false,
+  conEquipo,
+  compartidas,
+  totalActividades,
+} = Astro.props as Props;
+
+const participaciones = resumenes.reduce((s, r) => s + r.actividadesAsignadas, 0);
+const conEquipoValor = conEquipo ?? participaciones;
+const compartidasValor = compartidas ?? resumenes.reduce((s, r) => s + r.actividadesCompartidas, 0);
+const totalValor = totalActividades;
+const avanceProgEquipo = resumenes.reduce((s, r) => s + r.avanceProgramado, 0) / (resumenes.length || 1);
+/** Integrantes con al menos una actividad con avance real reportado. */
+const conAvanceReal = resumenes.filter((r) => r.avanceReal !== null).length;
+const avanceRealEquipo =
+  conAvanceReal === 0
+    ? null
+    : Math.round(
+        (resumenes.reduce((s, r) => s + (r.avanceReal ?? 0), 0) / conAvanceReal) * 10,
+      ) / 10;
+---
+<div class="card">
+  {title && <h3>{title}</h3>}
+  <p class="card-sub">
+    Participación promedio de cada integrante sobre todas las actividades del módulo.
+  </p>
+
+  <ul class:list={['part-list', { 'part-list--compact': compact }]}>
+    {resumenes.map((r) => (
+      <li class="part-row">
+        <span class="part-avatar part-avatar--equipo" aria-hidden="true">{r.participante.iniciales}</span>
+        <span class="part-body">
+          <span class="part-name">
+            {to ? <a class="table-link" href={`${to}/${r.participante.id}`}>{r.participante.nombre}</a> : r.participante.nombre}
+          </span>
+          <ProgressBar value={r.participacionGeneral} prefix="Participación" decimals={2} tone="info" showLabel={false} />
+          <span class="part-sub">
+            Avance real {r.avanceReal === null ? 'no calculado' : `${r.avanceReal} %`} · prog.{' '}
+            {formatPorcentaje(r.avanceProgramado)}
+          </span>
+        </span>
+        <span class="part-val">{formatPorcentaje(r.participacionGeneral)}</span>
+      </li>
+    ))}
+  </ul>
+
+  <div class="team-stats">
+    <div class="team-stat">
+      <span class="team-stat-k">Promedio del equipo</span>
+      <span class="team-stat-v">
+        {formatPorcentaje(resumenes.reduce((s, r) => s + r.participacionGeneral, 0) / (resumenes.length || 1))}
+      </span>
+      <span class="team-stat-note">Promedio de los integrantes</span>
+    </div>
+    <div class="team-stat">
+      <span class="team-stat-k">Avance programado</span>
+      <span class="team-stat-v">{formatPorcentaje(avanceProgEquipo)}</span>
+      <span class="team-stat-note">Cronograma al {FECHA_CORTE}, no ejecución</span>
+    </div>
+    <div class="team-stat">
+      <span class="team-stat-k">Avance real</span>
+      <span class="team-stat-v">
+        {avanceRealEquipo === null ? 'No calculado' : `${avanceRealEquipo} %`}
+      </span>
+      <span class="team-stat-note">
+        {avanceRealEquipo === null
+          ? 'Ninguna actividad con ejecución reportada'
+          : `Promedio de ${conAvanceReal} de ${resumenes.length} integrantes con dato`}
+      </span>
+    </div>
+    <div class="team-stat">
+      <span class="team-stat-k">Con el equipo</span>
+      <span class="team-stat-v">{conEquipoValor}{totalValor ? ` / ${totalValor}` : ''}</span>
+      <span class="team-stat-note">
+        {totalValor
+          ? `Suma de participaciones: ${participaciones}`
+          : 'Actividades con al menos un integrante del equipo'}
+      </span>
+    </div>
+    <div class="team-stat">
+      <span class="team-stat-k">Compartidas</span>
+      <span class="team-stat-v">{compartidasValor}</span>
+      <span class="team-stat-note">Actividades con más de un participante</span>
+    </div>
+  </div>
+
+  <p class="prog-note">
+    Avance real: promedio de las actividades con ejecución reportada (no es participación).
+    Avance programado: tiempo planificado consumido por cada integrante hasta la fecha de corte
+    ({FECHA_CORTE}). "No calculado" significa que no hay dato, no 0 %.
+  </p>
+
+  {cta && to && (
+    <div class="team-cta">
+      <a class="btn btn-ghost" href={to}>{cta} →</a>
+    </div>
+  )}
+</div>

@@ -1,12 +1,18 @@
 ---
 import DataTable from '../../components/DataTable.astro';
-import DemoBadge from '../../components/DemoBadge.astro';
 import StatCard from '../../components/StatCard.astro';
 import Timeline from '../../components/Timeline.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { actividades } from '../../data/actividades';
 import { proyecto } from '../../data/proyecto';
-import { daysBetween, formatDate, formatMoney, getObjetivo } from '../../lib/helpers';
+import { daysBetween, formatDate, formatMoney, getObjetivo, uniqueValues } from '../../lib/helpers';
+import { formatPorcentaje, getAvanceCalculado, getCoberturaAvanceReal, getParticipantesActividad } from '../../lib/participacion';
+import { FECHA_CORTE, getAvanceProgramado, getAvanceProgramadoGlobal } from '../../lib/progreso';
+import { formatDesviacion, getDesviacion, getResumenDesviacion } from '../../lib/desviacion';
+
+const avanceReal = getAvanceCalculado();
+const coberturaReal = getCoberturaAvanceReal();
+const desviacion = getResumenDesviacion();
 
 const duracionProyecto = daysBetween(proyecto.fechaInicio, proyecto.fechaFinal);
 const duracionModulo = daysBetween(proyecto.moduloInicio, proyecto.moduloFinal);
@@ -17,20 +23,24 @@ const ganttItems = actividades.map((a) => ({
   objetivoId: a.objetivoId,
   fechaInicio: a.fechaInicio,
   fechaFinal: a.fechaFinal,
-  estado: a.estado,
+  estado: a.estado ?? 'Sin estado registrado',
   avance: a.avance,
+  avanceProgramado: getAvanceProgramado(a),
 }));
 
 const tableRows = actividades.map((a) => {
   const obj = getObjetivo(a.objetivoId);
+  const partes = getParticipantesActividad(a.id);
   return {
     actividad: a.nombre,
     objetivo: obj ? `Objetivo ${obj.numero}` : 'General',
-    responsable: a.responsable,
+    participantes: partes.map((p) => p.participante.nombreCorto).join(' · '),
     inicio: formatDate(a.fechaInicio),
     final: formatDate(a.fechaFinal),
-    estado: a.estado,
-    avance: `${a.avance}%`,
+    avanceReal: typeof a.avance === 'number' ? `${a.avance} %` : 'No calculado',
+    desviacion: formatDesviacion(getDesviacion(a.id)),
+    avanceProg: formatPorcentaje(getAvanceProgramado(a)),
+    estado: a.estado ?? 'Sin estado registrado',
     presupuesto: formatMoney(a.presupuesto),
   };
 });
@@ -46,9 +56,43 @@ const tableRows = actividades.map((a) => {
       <StatCard title="Inicio del módulo" value={formatDate(proyecto.moduloInicio)} icon="calendar" tone="primary" caption="ERP · Marketing" />
       <StatCard title="Cierre del módulo" value={formatDate(proyecto.moduloFinal)} icon="calendar" tone="primary" caption={`${duracionModulo} días del módulo`} />
     </div>
-    <div style="margin-top:10px">
-      <DemoBadge text="Avances demo" tip="Los estados y porcentajes de avance del cronograma son de demostración." />
+    <div class="grid grid-2" style="margin-top:16px">
+      <StatCard
+        title="Avance programado"
+        value={formatPorcentaje(getAvanceProgramadoGlobal())}
+        icon="gauge"
+        tone="info"
+        caption={`Cronograma al ${FECHA_CORTE} · medida de calendario`}
+      />
+      <StatCard
+        title="Avance real"
+        value={avanceReal === null ? 'No calculado' : `${avanceReal} %`}
+        icon="gauge"
+        tone={avanceReal === null ? 'neutral' : 'primary'}
+        caption={`Reportado en ${coberturaReal.reportadas} de ${coberturaReal.total} actividades`}
+        to="/dashboard/avance"
+      />
+      <StatCard
+        title="Desviación (real − programado)"
+        value={desviacion.promedio === null
+          ? 'Sin datos'
+          : `${desviacion.promedio > 0 ? '+' : ''}${desviacion.promedio} pp`}
+        icon="target"
+        tone={desviacion.promedio === null ? 'neutral' : desviacion.promedio < 0 ? 'warning' : 'success'}
+        caption={desviacion.promedio === null
+          ? 'Se necesita avance real para comparar'
+          : `${desviacion.atrasado} atrasadas · ${desviacion.enLinea} en línea · ${desviacion.adelantado} adelantadas`}
+        to="/dashboard/avance"
+      />
     </div>
+    <p class="prog-note" style="margin-top:12px">
+      Las fechas de las actividades se derivan de la ventana de cada objetivo (reparto secuencial);
+      no son fechas de ejecución reales. El relleno interior de cada barra es el avance
+      programado a la fecha de corte ({FECHA_CORTE}): tiempo planificado consumido, no trabajo
+      realizado. El avance real se reporta en{" "}
+      <a class="as-link" href="/dashboard/avance">Avance real</a> y, sin dato, se muestra "No
+      calculado".
+    </p>
   </section>
 
   <section class="section">
@@ -73,16 +117,18 @@ const tableRows = actividades.map((a) => {
       columns={[
         { label: 'Actividad', key: 'actividad' },
         { label: 'Objetivo', key: 'objetivo' },
-        { label: 'Responsable', key: 'responsable' },
+        { label: 'Participantes', key: 'participantes' },
         { label: 'Inicio', key: 'inicio' },
         { label: 'Final', key: 'final' },
+        { label: 'Avance real', key: 'avanceReal', align: 'right' },
+        { label: 'Desviación', key: 'desviacion', align: 'right' },
+        { label: 'Avance prog.', key: 'avanceProg', align: 'right' },
         { label: 'Estado', key: 'estado', badge: true },
-        { label: 'Avance', key: 'avance' },
-        { label: 'Presupuesto', key: 'presupuesto' },
+        { label: 'Presupuesto', key: 'presupuesto', align: 'right' },
       ]}
       rows={tableRows}
       filters={[
-        { label: 'Estado', col: 'estado', options: ['No iniciada', 'En proceso', 'Completada', 'Retrasada'] },
+        { label: 'Estado', col: 'estado', options: uniqueValues(tableRows, (r) => r.estado) },
       ]}
       searchable={true}
       empty="No hay actividades en el cronograma."

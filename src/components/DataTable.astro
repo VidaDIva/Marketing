@@ -12,28 +12,44 @@ interface Column {
   label: string;
   key: string;
   badge?: boolean;
+  align?: 'left' | 'right';
 }
 
 interface Props {
   columns: Column[];
   rows: Record<string, any>[];
   link?: (row: Record<string, any>) => string;
+  linkLabel?: string;
   filters?: Filter[];
   searchable?: boolean;
   empty?: string;
 }
 
-const { columns, rows, link, filters = [], searchable = true, empty = 'No hay registros para mostrar.' } = Astro.props as Props;
+const { columns, rows, link, linkLabel, filters = [], searchable = true, empty = 'No hay registros para mostrar.' } = Astro.props as Props;
+
+/**
+ * Un filtro con una sola opción no filtra nada, así que no se renderiza. Los
+ * filtros se arman en cada página con `uniqueValues` sobre las filas reales,
+ * por lo que las opciones siempre corresponden a datos existentes.
+ */
+const filtersActivos = filters.filter((f) => f.options.length > 1);
+
+/**
+ * Atributo que lleva el valor de filtrado de cada fila. Debe ser `data-f-*`
+ * (con guion, no dos puntos) para que sea un atributo `data-*` válido, y se lee
+ * con `getAttribute` en `scripts/table-filters.ts` usando la misma plantilla.
+ */
+const filtroAttr = (col: string): string => `data-f-${col}`;
 
 const filterAttrs = (row: Record<string, any>): Record<string, string> =>
   Object.fromEntries(
-    filters.map((f) => [`data:f-${f.col}`, String(row[f.valueKey ?? f.col] ?? '')]),
+    filtersActivos.map((f) => [filtroAttr(f.col), String(row[f.valueKey ?? f.col] ?? '')]),
   ) as Record<string, string>;
 ---
 <div class="card data-table">
-  {(filters.length > 0 || searchable) && (
+  {(filtersActivos.length > 0 || searchable) && (
     <div class="table-toolbar">
-      {filters.map((f) => (
+      {filtersActivos.map((f) => (
         <select class="input" data-filter-col={f.col} aria-label={`Filtrar por ${f.label}`}>
           <option value="">{f.label}: todos</option>
           {f.options.map((o) => (
@@ -52,14 +68,15 @@ const filterAttrs = (row: Record<string, any>): Record<string, string> =>
       <thead>
         <tr>
           {columns.map((c) => (
-            <th>{c.label}</th>
+            <th class={c.align === 'right' ? 'table-num' : undefined}>{c.label}</th>
           ))}
+          {link && linkLabel && <th></th>}
         </tr>
       </thead>
       <tbody data-table-body>
         {rows.length === 0 ? (
           <tr>
-            <td class="empty-cell" colspan={columns.length}>
+            <td class="empty-cell" colspan={columns.length + (link && linkLabel ? 1 : 0)}>
               <div class="empty-state">{empty}</div>
             </td>
           </tr>
@@ -72,12 +89,18 @@ const filterAttrs = (row: Record<string, any>): Record<string, string> =>
                 {columns.map((c, ci) => {
                   const val = String(row[c.key] ?? '');
                   const cell = c.badge ? <StatusBadge status={val} /> : <span>{val}</span>;
+                  const cls = c.align === 'right' ? 'table-num' : undefined;
                   return (
-                    <td>
+                    <td class={cls}>
                       {ci === 0 && href ? <a class="table-link" href={href}>{cell}</a> : cell}
                     </td>
                   );
                 })}
+                {link && linkLabel && (
+                  <td class="table-num">
+                    {href && <a class="as-link table-link" href={href}>{linkLabel} →</a>}
+                  </td>
+                )}
               </tr>
             );
           })

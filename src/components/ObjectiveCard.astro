@@ -1,7 +1,12 @@
 ---
 import type { Objetivo } from '../data/types';
+import { formatPorcentaje, getActividadesPorObjetivo, getCoberturaAvanceReal, getResumenObjetivo } from '../lib/participacion';
+import { FECHA_CORTE } from '../lib/progreso';
+import { getDesviacionObjetivo } from '../lib/desviacion';
+import { formatMoney } from '../lib/helpers';
 import ProgressBar from './ProgressBar.astro';
 import StatusBadge from './StatusBadge.astro';
+import DesviacionPill from './DesviacionPill.astro';
 
 interface Props {
   objetivo: Objetivo;
@@ -9,21 +14,94 @@ interface Props {
 }
 
 const { objetivo, compact = false } = Astro.props as Props;
+
+/**
+ * Todo lo que se muestra aquí se CALCULA desde las actividades del objetivo:
+ * número de actividades, participación del equipo, estado, presupuesto y
+ * contadores de estado. El avance real también: es el promedio de las
+ * actividades con ejecución reportada (ver `lib/avance-real.ts`).
+ */
+const resumen = getResumenObjetivo(objetivo.id);
+const { estados } = resumen;
+const [s1, s2, s3] = resumen.participacionEquipo;
+const cobertura = getCoberturaAvanceReal(getActividadesPorObjetivo(objetivo.id));
+const desviacion = getDesviacionObjetivo(objetivo.id);
 ---
 <a href={`/objetivos/${objetivo.id}`} class="objective-card" aria-label={`Ver detalle del ${objetivo.nombre}`}>
   <div class="objective-head">
     <span class="objective-num">Objetivo {objetivo.numero}</span>
-    <StatusBadge status={objetivo.estado} />
+    <StatusBadge status={resumen.estado} />
   </div>
+
   <h3>{objetivo.nombre}</h3>
   <p class="objective-desc">{objetivo.descripcionCorta}</p>
+
+  <div class="objective-metrics">
+    <span class="objective-metric">
+      <span class="objective-metric-v">{resumen.totalActividades}</span>
+      <span class="objective-metric-k">Actividades</span>
+    </span>
+    <span class="objective-metric">
+      <span class="objective-metric-v">{formatMoney(resumen.presupuesto)}</span>
+      <span class="objective-metric-k">Presupuesto</span>
+    </span>
+    <span class="objective-metric">
+      <span class="objective-metric-v">{estados.completadas}</span>
+      <span class="objective-metric-k">Completadas</span>
+    </span>
+    <span class="objective-metric">
+      <span class="objective-metric-v">{estados.enProceso + estados.retrasadas}</span>
+      <span class="objective-metric-k">En proceso</span>
+    </span>
+    <span class="objective-metric">
+      <span class="objective-metric-v">{estados.pendientes}</span>
+      <span class="objective-metric-k">Pendientes</span>
+    </span>
+  </div>
+
   {!compact && (
-    <div class="objective-foot">
-      <ProgressBar value={objetivo.avance} showLabel={false} />
-      <div class="objective-meta">
-        <span>Avance: <strong>{objetivo.avance}%</strong></span>
-        <span>Riesgo <StatusBadge status={objetivo.riesgoNivel} /></span>
-      </div>
+    <div class="objective-part">
+      <span class="objective-part-k">Participación del equipo (promedio)</span>
+      {[s1, s2, s3].filter(Boolean).map((d) => (
+        <span class="objective-part-row">
+          <span class="objective-part-name">{d!.participante.nombreCorto}</span>
+          <ProgressBar value={d!.porcentaje} prefix="Participación" decimals={2} tone="info" />
+        </span>
+      ))}
+      <span class="objective-note">
+        {cobertura.reportadas === 0
+          ? `Avance real no calculado: ninguna de las ${cobertura.total} actividades tiene avance reportado.`
+          : `Avance real en ${cobertura.reportadas} de ${cobertura.total} actividades · ${estados.sinEstado} sin estado registrado.`}
+      </span>
     </div>
   )}
+
+  <div class="objective-prog">
+    <div class="objective-prog-head">
+      <span class="objective-part-k">Avance real (ejecución)</span>
+      <span class="objective-prog-val">
+        {resumen.avanceReal === null ? 'No calculado' : `${resumen.avanceReal} %`}
+      </span>
+    </div>
+    {resumen.avanceReal === null
+      ? <p class="prog-empty">Sin datos de ejecución registrados en este objetivo.</p>
+      : <ProgressBar value={resumen.avanceReal} prefix="Avance real" decimals={1} tone="success" />}
+    <div class="objective-prog-head">
+      <span class="objective-part-k">Avance programado (cronograma)</span>
+      <span class="objective-prog-val">{formatPorcentaje(resumen.avanceProgramado)}</span>
+    </div>
+    <ProgressBar value={resumen.avanceProgramado} prefix="Avance programado" decimals={2} tone="warning" />
+    <div class="objective-prog-head">
+      <span class="objective-part-k">Desviación (real − programado)</span>
+      <DesviacionPill desviacion={desviacion} />
+    </div>
+    <span class="prog-note">
+      Avance real: reportado por el equipo en {cobertura.reportadas} de {cobertura.total} actividades.
+      Avance programado: tiempo planificado consumido hasta {FECHA_CORTE} (calendario, no ejecución).
+    </span>
+  </div>
+
+  <div class="objective-foot">
+    <span class="objective-cta">Ver objetivo →</span>
+  </div>
 </a>

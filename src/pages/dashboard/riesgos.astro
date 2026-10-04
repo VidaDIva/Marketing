@@ -4,7 +4,7 @@ import DemoBadge from '../../components/DemoBadge.astro';
 import StatCard from '../../components/StatCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { riesgos } from '../../data/riesgos';
-import { getObjetivo } from '../../lib/helpers';
+import { getObjetivo, uniqueValues } from '../../lib/helpers';
 
 const total = riesgos.length;
 const altos = riesgos.filter((r) => r.nivel === 'Alto').length;
@@ -55,8 +55,8 @@ const tableRows = riesgos.map((r) => {
     ]}
     rows={tableRows}
     filters={[
-      { label: 'Nivel', col: 'nivel', options: ['Alto', 'Medio', 'Bajo'] },
-      { label: 'Estado', col: 'estado', options: ['Activo', 'En seguimiento', 'Mitigado'] },
+      { label: 'Nivel', col: 'nivel', options: uniqueValues(tableRows, (r) => r.nivel) },
+      { label: 'Estado', col: 'estado', options: uniqueValues(tableRows, (r) => r.estado) },
     ]}
     empty="No hay riesgos registrados que coincidan con el filtro."
   />

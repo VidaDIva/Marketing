@@ -1,40 +1,82 @@
+import { actividades } from './actividades';
+import { objetivos } from './objetivos';
 import type { PresupuestoGeneral, PresupuestoObjetivo } from './types';
 
-interface CifraObjetivo {
-  total: number;
-  avance: number;
+/**
+ * Presupuesto del módulo de Marketing.
+ *
+ * Fuente única de verdad: `Actividad.presupuesto`. Los totales NUNCA se
+ * escriben a mano en un componente o en otro archivo:
+ *
+ *   objetivo  → suma del presupuesto de sus actividades
+ *   proyecto  → suma de los cinco objetivos
+ *
+ * No existe información real de ejecución presupuestal, por lo que
+ * `ejecutado`, `disponible` y `porcentajeEjecucion` quedan sin valor
+ * (la interfaz no muestra un porcentaje de ejecución inventado).
+ */
+
+export const PRESUPUESTO_TOTAL_ESPERADO = 18300000;
+
+export function getPresupuestoActividad(actividadId: number): number {
+  return actividades.find((a) => a.id === actividadId)?.presupuesto ?? 0;
 }
 
-const cifras: CifraObjetivo[] = [
-  { total: 2850000, avance: 25 },
-  { total: 3050000, avance: 15 },
-  { total: 3950000, avance: 5 },
-  { total: 3700000, avance: 3 },
-  { total: 4750000, avance: 2 },
-];
+export function getPresupuestoObjetivo(objetivoId: number): PresupuestoObjetivo {
+  const total = actividades
+    .filter((a) => a.objetivoId === objetivoId)
+    .reduce((s, a) => s + a.presupuesto, 0);
+  return { objetivoId, total };
+}
 
-export const presupuestoPorObjetivo: PresupuestoObjetivo[] = cifras.map((c, i) => {
-  const ejecutado = Math.round((c.total * c.avance) / 100);
-  const pendiente = c.total - ejecutado;
+export function getPresupuestosPorObjetivo(): PresupuestoObjetivo[] {
+  return objetivos.map((o) => getPresupuestoObjetivo(o.id));
+}
+
+export function getPresupuestoTotal(): number {
+  return actividades.reduce((s, a) => s + a.presupuesto, 0);
+}
+
+export function getPresupuestoPromedioObjetivo(): number {
+  if (objetivos.length === 0) return 0;
+  return Math.round(getPresupuestoTotal() / objetivos.length);
+}
+
+/** Porcentaje que representa un objetivo dentro del total del módulo. */
+export function getPorcentajeDelTotal(objetivoId: number): number {
+  const total = getPresupuestoTotal();
+  if (total === 0) return 0;
+  return Math.round((getPresupuestoObjetivo(objetivoId).total / total) * 1000) / 10;
+}
+
+/**
+ * Presupuesto ejecutado. QUEDA PREPARADO: devuelve `undefined` mientras el
+ * proyecto no registre ejecución real. Cuando exista, se puede calcular a
+ * partir de `Actividad.avance` sin tocar los componentes.
+ */
+export function getPresupuestoEjecutado(objetivoId?: number): number | undefined {
+  return undefined;
+}
+
+export function getPresupuestoDisponible(objetivoId?: number): number | undefined {
+  return undefined;
+}
+
+export function getResumenPresupuesto(): PresupuestoGeneral {
   return {
-    objetivoId: i + 1,
-    total: c.total,
-    ejecutado,
-    pendiente,
-    porcentajeEjecucion: Math.round((ejecutado / c.total) * 1000) / 10,
+    total: getPresupuestoTotal(),
+    objetivos: objetivos.length,
+    actividades: actividades.length,
+    ejecutado: getPresupuestoEjecutado(),
+    disponible: getPresupuestoDisponible(),
   };
-});
+}
 
-const totalGeneral = cifras.reduce((s, c) => s + c.total, 0);
-const ejecutadoGeneral = presupuestoPorObjetivo.reduce((s, p) => s + p.ejecutado, 0);
-
-export const presupuestoGeneral: PresupuestoGeneral = {
-  total: totalGeneral,
-  ejecutado: ejecutadoGeneral,
-  pendiente: totalGeneral - ejecutadoGeneral,
-  porcentajeEjecucion: Math.round((ejecutadoGeneral / totalGeneral) * 1000) / 10,
-};
-
-export function getPresupuestoObjetivo(objetivoId: number): PresupuestoObjetivo | undefined {
-  return presupuestoPorObjetivo.find((p) => p.objetivoId === objetivoId);
+/** Desglose de presupuesto de un objetivo: actividad → monto + total. */
+export function getDesglosePresupuesto(objetivoId: number) {
+  const acts = actividades.filter((a) => a.objetivoId === objetivoId);
+  return {
+    lineas: acts.map((a) => ({ id: a.id, nombre: a.nombre, presupuesto: a.presupuesto })),
+    total: acts.reduce((s, a) => s + a.presupuesto, 0),
+  };
 }

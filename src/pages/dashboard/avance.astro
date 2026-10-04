@@ -1,0 +1,475 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import StatCard from '../../components/StatCard.astro';
+import DesviacionPill from '../../components/DesviacionPill.astro';
+import ProgressBar from '../../components/ProgressBar.astro';
+import { actividades } from '../../data/actividades';
+import { objetivos } from '../../data/objetivos';
+import { ESTADOS_ACTIVIDAD, ESTADO_SIN_DATOS } from '../../data/types';
+import { formatDate, getObjetivo } from '../../lib/helpers';
+import { getAvanceProgramado, getAvanceProgramadoGlobal, getAvanceProgramadoObjetivo } from '../../lib/progreso';
+import {
+  formatPorcentaje,
+  getActividadesPorObjetivo,
+  getAvanceCalculado,
+  getAvanceParticipanteEnObjetivo,
+  getCoberturaAvanceReal,
+  getParticipantesActividad,
+  getResumenObjetivo,
+} from '../../lib/participacion';
+import { participantes } from '../../data/participantes';
+import { getRegistroReal, getFechaActualizacion } from '../../lib/avance-real';
+import { getDesviacion, getDesviacionObjetivo, getResumenDesviacion } from '../../lib/desviacion';
+
+const cobertura = getCoberturaAvanceReal();
+const avanceReal = getAvanceCalculado();
+const avanceProgramado = getAvanceProgramadoGlobal();
+const resumen = getResumenDesviacion();
+const fechaActualizacion = getFechaActualizacion();
+
+const conDatos = actividades.filter((a) => typeof a.avance === 'number');
+const porObjetivo = objetivos.map((o) => {
+  const acts = conDatos.filter((a) => a.objetivoId === o.id);
+  const real = acts.length
+    ? Math.round((acts.reduce((s, a) => s + (a.avance ?? 0), 0) / acts.length) * 10) / 10
+    : null;
+  // Programado sobre las MISMAS actividades con dato, para que la resta sea honesta.
+  const programado = acts.length
+    ? Math.round((acts.reduce((s, a) => s + getAvanceProgramado(a), 0) / acts.length) * 10) / 10
+    : null;
+  return {
+    objetivo: o,
+    real,
+    programado,
+    programadoTotal: getAvanceProgramadoObjetivo(o.id),
+    desviacion: getDesviacionObjetivo(o.id),
+    reportadas: acts.length,
+    total: actividades.filter((a) => a.objetivoId === o.id).length,
+  };
+});
+
+/** Datos iniciales que el formulario usa para pintar los campos. */
+const filas = actividades.map((a) => {
+  const r = getRegistroReal(a.id);
+  return { id: a.id, estado: r.estado, avance: r.avance, fecha: r.fecha, nota: r.nota };
+});
+
+const pctCobertura = cobertura.total === 0 ? 0 : Math.round((cobertura.reportadas / cobertura.total) * 100);
+
+/** Peso de cada actividad dentro de su objetivo: 100 % ÷ nº de actividades. */
+const pesoActividad = (objetivoId: number): number => {
+  const n = getActividadesPorObjetivo(objetivoId).length;
+  return n === 0 ? 0 : Math.round((100 / n) * 100) / 100;
+};
+const formatoPeso = (objetivoId: number): string => {
+  const p = pesoActividad(objetivoId);
+  return Number.isInteger(p) ? String(p) : p.toFixed(2).replace(/0$/, '');
+};
+const conActividadesCompletadas = (objetivoId: number): number =>
+  getActividadesPorObjetivo(objetivoId).filter((a) => a.avance === 100).length;
+/** Participantes (equipo o externos) con alguna actividad en el objetivo. */
+const participantesConActividadesEn = (objetivoId: number) =>
+  participantes.filter((p) =>
+    getActividadesPorObjetivo(objetivoId).some(
+      (a) => getParticipantesActividad(a.id).some((x) => x.participante.id === p.id),
+    ),
+  );
+---
+
+<DashboardLayout
+  title="Avance real (ejecución)"
+  subtitle="Registro manual de lo ejecutado. El avance real se contrasta con el avance programado del cronograma."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      <StatCard
+        title="Avance real (módulo)"
+        value={avanceReal === null ? 'No calculado' : `${avanceReal} %`}
+        icon="gauge"
+        tone={avanceReal === null ? 'neutral' : 'primary'}
+        caption={cobertura.reportadas === 0
+          ? 'Sin datos de ejecución registrados'
+          : `Promedio de las ${cobertura.reportadas} actividades reportadas`}
+        to="/dashboard"
+      />
+      <StatCard
+        title="Avance programado"
+        value={`${avanceProgramado} %`}
+        icon="calendar"
+        tone="info"
+        caption="Calendario: el cronograma del módulo ya se consumió"
+        to="/dashboard/cronograma"
+      />
+      <StatCard
+        title="Desviación del módulo"
+        value={resumen.promedio === null ? 'Sin datos' : `${resumen.promedio > 0 ? '+' : ''}${resumen.promedio} pp`}
+        icon="target"
+        tone={resumen.promedio === null ? 'neutral' : resumen.promedio < 0 ? 'warning' : 'success'}
+        caption={resumen.promedio === null
+          ? 'Se necesita avance real para comparar'
+          : `${resumen.atrasado} atrasadas · ${resumen.enLinea} en línea · ${resumen.adelantado} adelantadas`}
+      />
+      <StatCard
+        title="Cobertura del registro"
+        value={`${cobertura.reportadas} / ${cobertura.total}`}
+        icon="list"
+        tone={pctCobertura === 100 ? 'success' : pctCobertura > 0 ? 'warning' : 'neutral'}
+        caption={fechaActualizacion ? `Última actualización: ${formatDate(fechaActualizacion)}` : 'Registro vacío'}
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Estado del registro</h2>
+    </div>
+    <div class="card">
+      <ProgressBar value={pctCobertura} prefix="Cobertura del registro" decimals={0} />
+      <p class="prog-note">
+        Cobertura = actividades con avance real reportado ÷ total de actividades.
+        {cobertura.reportadas === 0
+          ? 'No hay datos de ejecución: el dashboard muestra "No calculado" y no inventa porcentajes.'
+          : `El avance real se promedia solo sobre las ${cobertura.reportadas} actividades reportadas; las ${cobertura.total - cobertura.reportadas} restantes no cuentan como 0 %.`}
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Avance real por objetivo</h2>
+    </div>
+    <div class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Objetivo</th>
+            <th class="table-num">Avance real</th>
+            <th class="table-num">Avance programado</th>
+            <th>Desviación</th>
+            <th class="table-num">Cobertura</th>
+          </tr>
+        </thead>
+        <tbody>
+          {porObjetivo.map(({ objetivo: o, real, programado, programadoTotal, desviacion, reportadas, total }) => (
+            <tr>
+              <td>
+                <a class="table-link" href={`/objetivos/${o.id}`}>Objetivo {o.numero}: {o.nombre}</a>
+              </td>
+              <td class="table-num">
+                {real === null ? ESTADO_SIN_DATOS : <strong>{real} %</strong>}
+              </td>
+              <td class="table-num">
+                {programado === null ? ESTADO_SIN_DATOS : `${programado} %`}
+                {programado !== null && programadoTotal !== programado && (
+                  <span class="table-muted" style="display:block;font-size:.72rem">
+                    total del objetivo: {programadoTotal} %
+                  </span>
+                )}
+              </td>
+              <td>
+                <DesviacionPill desviacion={desviacion} />
+              </td>
+              <td class="table-num">{reportadas} / {total}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="prog-note">
+      El avance real se promedia solo sobre las actividades reportadas de cada objetivo, y se compara
+      contra el avance programado de esas mismas actividades (no contra el del objetivo completo), para
+      que la comparación sea justa.
+    </p>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Registrar avance por actividad</h2>
+    </div>
+    <div class="card">
+      <p class="card-sub">
+        Elige el estado y el % real de cada actividad. Al descargar se genera
+        <code>src/data/avance-real.json</code>: reemplaza ese archivo en el repositorio y ejecuta
+        <code>npm run build</code> para que el dashboard muestre el dato nuevo. Vaciar el % deja la
+        actividad sin dato (no es 0 %).
+      </p>
+
+      <div class="avance-live" style="margin:16px 0">
+        <div class="card">
+          <div class="stat-title">Avance real</div>
+          <div class="stat-value" data-live="real">—</div>
+        </div>
+        <div class="card">
+          <div class="stat-title">Cobertura</div>
+          <div class="stat-value" data-live="cobertura">—</div>
+        </div>
+        <div class="card">
+          <div class="stat-title">Completadas</div>
+          <div class="stat-value" data-live="completadas">—</div>
+        </div>
+        <div class="card">
+          <div class="stat-title">Estados distintos</div>
+          <div class="stat-value" data-live="estados">—</div>
+        </div>
+      </div>
+
+      <div class="avance-warn" data-avance-avisos>Sin inconsistencias entre estado y % de avance.</div>
+
+      <div class="avance-form" data-avance-form style="margin-top:16px">
+        <div class="avance-row avance-row-head">
+          <span>Actividad</span>
+          <span>Estado</span>
+          <span>Avance real</span>
+          <span>Fecha</span>
+          <span>Nota</span>
+        </div>
+        {
+          actividades.map((a) => {
+            const o = getObjetivo(a.objetivoId);
+            const r = getRegistroReal(a.id);
+            const prog = getAvanceProgramado(a);
+            const desv = getDesviacion(a.id);
+            return (
+              <div class="avance-row" data-avance-row data-id={a.id} data-con-dato={r.avance === null ? 'false' : 'true'}>
+                <span class="avance-cell-nombre">
+                  <span class="avance-nombre">A{String(a.id).padStart(2, '0')} · {a.nombre}</span>
+                  <span class="avance-meta">
+                    {o ? `Objetivo ${o.numero}` : 'General'} · programado {prog} % ·{' '}
+                    {desv === null ? 'sin dato real' : `desviación ${desv > 0 ? '+' : ''}${desv} pp`}
+                  </span>
+                </span>
+                <select class="input" data-campo="estado" aria-label={`Estado de la actividad ${a.id}`}>
+                  <option value="">Sin dato</option>
+                  {ESTADOS_ACTIVIDAD.map((e) => (
+                    <option value={e} selected={r.estado === e}>{e}</option>
+                  ))}
+                </select>
+                <input
+                  class="input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  inputmode="decimal"
+                  placeholder="—"
+                  value={r.avance === null ? '' : String(r.avance)}
+                  data-campo="avance"
+                  aria-label={`Avance real de la actividad ${a.id}`}
+                />
+                <input
+                  class="input"
+                  type="date"
+                  value={r.fecha ?? ''}
+                  data-campo="fecha"
+                  aria-label={`Fecha de registro de la actividad ${a.id}`}
+                />
+                <input
+                  class="input"
+                  type="text"
+                  placeholder="Observación"
+                  value={r.nota ?? ''}
+                  data-campo="nota"
+                  aria-label={`Nota de la actividad ${a.id}`}
+                />
+              </div>
+            );
+          })
+        }
+
+        <div class="avance-actions" style="margin-top:16px">
+          <button class="btn btn-primary" type="button" data-avance-descargar>Descargar avance-real.json</button>
+          <button class="btn btn-ghost" type="button" data-avance-copiar>Copiar JSON</button>
+          <button class="btn btn-ghost" type="button" data-avance-resetear>Limpiar formulario</button>
+        </div>
+
+        <p class="prog-note">
+          Al descargar se reemplaza el archivo completo del registro (las 36 actividades), no solo las
+          filas que edites. Guarda el JSON sobre <code>src/data/avance-real.json</code> y recompila.
+        </p>
+
+        <details style="margin-top:12px">
+          <summary class="as-link">Ver JSON que se descargará</summary>
+          <pre class="avance-code" data-avance-json>Se actualiza al descargar o copiar.</pre>
+        </details>
+
+        <script type="application/json" data-avance-inicial set:html={JSON.stringify({ version: 1, actualizado: fechaActualizacion, filas })} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Avance por objetivo y participante</h2>
+      <span class="table-muted">Cada objetivo vale 100 % y sus actividades pesan lo mismo</span>
+    </div>
+
+    <div class="card">
+      <p class="card-sub">
+        Marca una actividad cuando esté terminada: esa actividad suma <strong>100 % ÷ nº de
+        actividades del objetivo</strong> al avance del objetivo. Ejemplo: el objetivo 1 tiene 6
+        actividades, así que cada una vale {formatoPeso(1)} % y cada casilla marcada suma esa misma
+        cantidad. Una casilla a medio marcar se ve en indeterminate y el % se puede afinar arriba.
+      </p>
+      <p class="card-sub">
+        Debajo de cada objetivo, la tabla muestra cuánto lleva hecho <strong>cada participante</strong>
+        en ese objetivo: la parte de su participación oficial que ya está completada.
+      </p>
+      <div class="avance-actions" style="margin:12px 0 4px">
+        <button class="btn btn-ghost" type="button" data-checklist-marcar-todo>Marcar todo como completado</button>
+        <button class="btn btn-ghost" type="button" data-checklist-limpiar>Limpiar checklist</button>
+      </div>
+      <p class="prog-note">
+        Las casillas escriben en el mismo registro que el formulario de arriba: al descargar el JSON
+        queda todo junto. Al marcar la primera actividad de un objetivo, las demás pasan a 0 % (sabemos
+        que no están hechas), así que el objetivo se lee como <strong>marcadas ÷ total × 100</strong>; los
+        % parciales que hayas escrito a mano se respetan. Un objetivo sin tocar se queda en "No
+        calculado".
+      </p>
+    </div>
+
+    <div class="checklist" data-checklist>
+      {
+        objetivos.map((o) => {
+          const acts = getActividadesPorObjetivo(o.id);
+          const peso = acts.length === 0 ? 0 : Math.round((100 / acts.length) * 100) / 100;
+          const resumenObj = getResumenObjetivo(o.id);
+          return (
+            <div class="card checklist-obj" data-checklist-obj data-obj={o.id}>
+              <div class="checklist-head">
+                <div style="min-width:0">
+                  <a class="table-link" href={`/objetivos/${o.id}`}>
+                    Objetivo {o.numero}: {o.nombre}
+                  </a>
+                  <span class="checklist-peso">
+                    {acts.length} {acts.length === 1 ? 'actividad' : 'actividades'} · cada una vale{' '}
+                    {formatoPeso(o.id)} % del objetivo
+                  </span>
+                </div>
+                <div class="checklist-cifras">
+                  <div class="checklist-cifra">
+                    <span class="checklist-cifra-v" data-obj-real>
+                      {resumenObj.avanceReal === null ? 'No calculado' : `${resumenObj.avanceReal} %`}
+                    </span>
+                    <span class="checklist-cifra-k">
+                      completadas{' '}
+                      <span data-obj-count>
+                        {resumenObj.coberturaAvance.reportadas === 0
+                          ? '—'
+                          : `${conActividadesCompletadas(o.id)} de ${acts.length}`}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="checklist-cifra">
+                    <span class="checklist-cifra-v" data-obj-desv>
+                      <DesviacionPill desviacion={getDesviacionObjetivo(o.id)} />
+                    </span>
+                    <span class="checklist-cifra-k">desviación</span>
+                  </div>
+                </div>
+              </div>
+
+              <ul class="checklist-acts">
+                {acts.map((a) => {
+                  const partes = getParticipantesActividad(a.id);
+                  const r = getRegistroReal(a.id);
+                  return (
+                    <li class="checklist-act" data-checklist-act data-id={a.id}>
+                      <label class="checklist-check">
+                        <input
+                          type="checkbox"
+                          data-checklist-box
+                          checked={a.avance === 100}
+                          aria-label={`Marcar la actividad ${a.id} como completada`}
+                        />
+                        <span class="checklist-act-nombre">
+                          A{String(a.id).padStart(2, '0')} · {a.nombre}
+                        </span>
+                      </label>
+                      <span class="checklist-partes">
+                        {partes.map((p) => (
+                          <span class="checklist-parte" data-par={p.participante.id} data-porcentaje={p.porcentaje}>
+                            {p.participante.nombreCorto} {formatPorcentaje(p.porcentaje)}
+                          </span>
+                        ))}
+                      </span>
+                      <span class="checklist-act-avance">
+                        <span class="checklist-peso">+{formatoPeso(o.id)} %</span>
+                        <span class="checklist-act-real" data-act-real>
+                          {typeof a.avance === 'number' ? `${a.avance} %` : 'sin dato'}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div class="checklist-participantes">
+                <span class="objective-part-k">Cuánto lleva cada participante en este objetivo</span>
+                <table class="table" style="margin-top:6px">
+                  <thead>
+                    <tr>
+                      <th>Participante</th>
+                      <th class="table-num">Participación oficial</th>
+                      <th class="table-num">Actividades completadas</th>
+                      <th class="table-num">Avance en el objetivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {participantesConActividadesEn(o.id).map((p) => {
+                      const d = getAvanceParticipanteEnObjetivo(p.id, o.id);
+                      return (
+                        <tr>
+                          <td>{p.nombre}</td>
+                          <td class="table-num">{formatPorcentaje(d.participacionTotal)}</td>
+                          <td class="table-num">
+                            {d.reportadas === 0 ? '—' : `${d.actividadesCompletadas} de ${d.actividadesAsignadas}`}
+                          </td>
+                          <td class="table-num">
+                            <b data-part-real={p.id}>{d.avance === null ? 'No calculado' : `${d.avance} %`}</b>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p class="prog-note" style="margin-top:8px">
+                Peso por actividad: {formatoPeso(o.id)} % ({acts.length} actividades del objetivo). El
+                avance del objetivo se calcula como el promedio de sus actividades, así que marcar una
+                actividad completa sube {formatoPeso(o.id)} pp.
+              </p>
+            </div>
+          );
+        })
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Cómo se interpretan las cifras</h2>
+    </div>
+    <div class="card">
+      <p class="card-sub">
+        <strong>Avance real</strong>: porcentaje de ejecución reportado por el equipo. Sin dato, la
+        interfaz dice "No calculado" y muestra la cobertura; nunca se rellena con 0 % ni con el avance
+        programado.
+      </p>
+      <p class="card-sub">
+        <strong>Avance programado</strong>: porcentaje del tiempo planificado consumido hasta la fecha
+        de corte (12/09/2026). Es calendario, no ejecución.
+      </p>
+      <p class="card-sub">
+        <strong>Desviación</strong>: avance real menos avance programado, en puntos porcentuales. Se
+        considera "en línea" dentro de ±5 pp. Solo existe si hay avance real reportado.
+      </p>
+    </div>
+  </section>
+</DashboardLayout>
+
+<script>
+  import { initFormularioAvance } from '../../scripts/avance-form';
+  import { initChecklistAvance } from '../../scripts/avance-checklist';
+  initFormularioAvance();
+  initChecklistAvance();
+</script>

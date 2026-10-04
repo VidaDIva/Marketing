@@ -1,6 +1,10 @@
 ---
 import type { Actividad } from '../data/types';
-import { formatDate, formatMoney, getObjetivo } from '../lib/helpers';
+import { formatDate, formatMoney, getObjetivo, rangoAvance, RANGOS_AVANCE, uniqueValues } from '../lib/helpers';
+import { getParticipantesActividad } from '../lib/participacion';
+import { getAvanceProgramado, FECHA_CORTE } from '../lib/progreso';
+import { formatDesviacion } from '../lib/desviacion';
+import { participantes } from '../data/participantes';
 import DataTable from './DataTable.astro';
 
 interface Props {
@@ -10,45 +14,88 @@ interface Props {
 
 const { rows, searchable = true } = Astro.props as Props;
 
-const estadoOpciones = ['No iniciada', 'En proceso', 'Completada', 'Retrasada'];
-const responsables = [...new Set(rows.map((a) => a.responsable))];
+/** Los estados se ofrecen desde las filas: el proyecto no tiene estados reales. */
+const estadoOpciones = uniqueValues(rows, (a) => a.estado ?? 'Sin estado registrado');
 const objetivosDelSet = [...new Set(rows.map((a) => a.objetivoId))];
+const participantesFila = (a: Actividad) => getParticipantesActividad(a.id);
+const participantesUnicos = participantes
+  .filter((p) => rows.some((a) => a.participaciones.some((x) => x.participanteId === p.id)))
+  .map((p) => p.nombreCorto);
+
+/** Tramos del avance real, para poder filtrar por rango. */
+const AVANCE_RANGOS = RANGOS_AVANCE;
+const rangoReal = (v: number | null): string => (v === null ? 'Sin dato real' : rangoAvance(v));
 
 const tableRows = rows.map((a) => {
   const objetivo = getObjetivo(a.objetivoId);
+  const partes = participantesFila(a);
+  const avance = getAvanceProgramado(a);
+  const real = typeof a.avance === 'number' ? a.avance : null;
   return {
     id: `A${String(a.id).padStart(2, '0')}`,
     nombre: a.nombre,
     objetivo: objetivo ? `Objetivo ${objetivo.numero}` : 'General',
-    responsable: a.responsable,
+    participantes: partes.map((p) => p.participante.nombreCorto).join(' · '),
+    participacion: partes.map((p) => `${p.participante.nombreCorto} ${p.porcentaje} %`).join(' · '),
+    // Filtro por participante: varios valores separados por "|"
+    participantesFiltro: partes.map((p) => p.participante.nombreCorto).join('|'),
     fInicio: formatDate(a.fechaInicio),
     fFin: formatDate(a.fechaFinal),
-    estado: a.estado,
-    avance: `${a.avance}%`,
+    estado: a.estado ?? 'Sin estado registrado',
+    avanceReal: real === null ? 'No calculado' : `${real} %`,
+    avanceRealFiltro: rangoReal(real),
+    desviacion: formatDesviacion(real === null ? null : Math.round((real - avance) * 10) / 10),
+    avanceProg: `${avance.toFixed(2)} %`,
+    avanceProgFiltro: rangoAvance(avance),
     presupuesto: formatMoney(a.presupuesto),
     objetivoFiltro: objetivo ? `Objetivo ${objetivo.numero}` : 'General',
     idNum: a.id,
   };
 });
 ---
-<DataTable
-  columns={[
-    { label: 'Actividad', key: 'nombre' },
-    { label: 'ID', key: 'id' },
-    { label: 'Objetivo', key: 'objetivo' },
-    { label: 'Responsable', key: 'responsable' },
-    { label: 'Inicio', key: 'fInicio' },
-    { label: 'Final', key: 'fFin' },
-    { label: 'Estado', key: 'estado', badge: true },
-    { label: 'Avance', key: 'avance' },
-    { label: 'Presupuesto', key: 'presupuesto' },
-  ]}
-  rows={tableRows}
-  link={(row) => `/actividades/${(row as any).idNum}`}
-  filters={[
-    { label: 'Objetivo', col: 'objetivo', valueKey: 'objetivoFiltro', options: objetivosDelSet.map((o) => `Objetivo ${o}`) },
-    { label: 'Estado', col: 'estado', options: estadoOpciones },
-    { label: 'Responsable', col: 'responsable', options: responsables },
-  ]}
-  searchable={searchable}
-/>
+<div class="activity-table-wrap">
+  <DataTable
+    columns={[
+      { label: 'Actividad', key: 'nombre' },
+      { label: 'ID', key: 'id' },
+      { label: 'Objetivo', key: 'objetivo' },
+      { label: 'Participantes', key: 'participantes' },
+      { label: 'Participación', key: 'participacion' },
+      { label: 'Inicio', key: 'fInicio' },
+      { label: 'Final', key: 'fFin' },
+      { label: 'Avance real', key: 'avanceReal', align: 'right' },
+      { label: 'Desviación', key: 'desviacion', align: 'right' },
+      { label: 'Avance prog.', key: 'avanceProg', align: 'right' },
+      { label: 'Presupuesto', key: 'presupuesto', align: 'right' },
+      { label: 'Estado', key: 'estado', badge: true },
+    ]}
+    rows={tableRows}
+    link={(row) => `/actividades/${(row as any).idNum}`}
+    filters={[
+      { label: 'Objetivo', col: 'objetivo', valueKey: 'objetivoFiltro', options: objetivosDelSet.map((o) => `Objetivo ${o}`) },
+      { label: 'Estado', col: 'estado', options: estadoOpciones },
+      { label: 'Participante', col: 'participante', valueKey: 'participantesFiltro', options: participantesUnicos },
+      {
+        label: 'Avance real',
+        col: 'avanceReal',
+        valueKey: 'avanceRealFiltro',
+        options: AVANCE_RANGOS.filter((r) => tableRows.some((r2) => r2.avanceRealFiltro === r)).concat(
+          tableRows.some((r2) => r2.avanceRealFiltro === 'Sin dato real') ? ['Sin dato real'] : [],
+        ),
+      },
+      {
+        label: 'Avance prog.',
+        col: 'avanceProg',
+        valueKey: 'avanceProgFiltro',
+        options: AVANCE_RANGOS.filter((r) => tableRows.some((r2) => r2.avanceProgFiltro === r)),
+      },
+    ]}
+    searchable={searchable}
+  />
+  <p class="prog-note">
+    Avance real: ejecución reportada por el equipo (se registra en{" "}
+    <a class="as-link" href="/dashboard/avance">Avance real</a>). Avance prog.: porcentaje del tiempo
+    planificado de cada actividad consumido hasta la fecha de corte ({FECHA_CORTE}); es calendario, no
+    ejecución. "No calculado" significa que no hay dato, no 0 %.
+  </p>
+</div>

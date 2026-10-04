@@ -4,7 +4,7 @@ interface Props {
 }
 
 const textoPorDefecto =
-  'Los porcentajes de avance, montos ejecutados, indicadores de Marketing y demás cifras sin fuente oficial son DATOS DE DEMOSTRACIÓN utilizados solo para visualizar el dashboard. No representan información real del proyecto.';
+  'Los datos de objetivos, actividades, participantes, porcentajes de participación, presupuestos y cronograma son datos reales del proyecto. El "avance programado" es una medida de calendario (tiempo planificado consumido hasta la fecha de corte) y NO es avance de ejecución. El "avance real" proviene del archivo avance-real.json, que el equipo actualiza desde el formulario de /dashboard/avance; cuando una actividad no tiene dato se muestra "No calculado" con su cobertura, nunca 0 %. Los estados de entregables y riesgos, la matriz de stakeholders y los indicadores de Marketing son DATOS DE DEMOSTRACIÓN usados solo para visualizar el dashboard.';
 const { text = textoPorDefecto } = Astro.props as Props;
 ---
 <div class="demo-note" role="note">
@@ -12,7 +12,7 @@ const { text = textoPorDefecto } = Astro.props as Props;
     <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
   </svg>
   <div>
-    <strong>Datos de demostración</strong>
+    <strong>Alcance de los datos</strong>
     <p>{text}</p>
   </div>
 </div>

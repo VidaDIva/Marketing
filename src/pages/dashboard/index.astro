@@ -1,25 +1,34 @@
 ---
-import DemoBadge from '../../components/DemoBadge.astro';
-import DemoNote from '../../components/DemoNote.astro';
 import ObjectiveCard from '../../components/ObjectiveCard.astro';
-import ProgressBar from '../../components/ProgressBar.astro';
 import RiskCard from '../../components/RiskCard.astro';
 import StatCard from '../../components/StatCard.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
+import TeamParticipationCard from '../../components/TeamParticipationCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { actividades } from '../../data/actividades';
 import { entregables } from '../../data/entregables';
 import { objetivos } from '../../data/objetivos';
-import { presupuestoGeneral } from '../../data/presupuesto';
+import { getPresupuestoObjetivo, getPresupuestoTotal } from '../../data/presupuesto';
 import { riesgos } from '../../data/riesgos';
-import { formatMoney, getObjetivo } from '../../lib/helpers';
+import { formatDate, formatMoney, getObjetivo } from '../../lib/helpers';
+import {
+  formatPorcentaje,
+  getActividadesCompartidas,
+  getActividadesConEquipo,
+  getAvanceCalculado,
+  getContadorEstadosGlobal,
+  getCoberturaAvanceReal,
+  getResumenEquipo,
+} from '../../lib/participacion';
+import { FECHA_CORTE, getAvanceProgramadoGlobal, getAvanceProgramadoObjetivo } from '../../lib/progreso';
+import { getDesviacionGlobal } from '../../lib/desviacion';
 
 const totalActividades = actividades.length;
-const enProceso = actividades.filter((a) => a.estado === 'En proceso').length;
-const noIniciadas = actividades.filter((a) => a.estado === 'No iniciada').length;
-const completadas = actividades.filter((a) => a.estado === 'Completada').length;
-const retrasadas = actividades.filter((a) => a.estado === 'Retrasada').length;
-
+const estados = getContadorEstadosGlobal();
+const presupuestoTotal = getPresupuestoTotal();
+const avanceGeneral = getAvanceCalculado();
+const coberturaReal = getCoberturaAvanceReal();
+const desviacionGlobal = getDesviacionGlobal();
 const riesgosAltos = riesgos.filter((r) => r.nivel === 'Alto').length;
 const riesgosMedios = riesgos.filter((r) => r.nivel === 'Medio').length;
 const riesgosMitigados = riesgos.filter((r) => r.estado === 'Mitigado').length;
@@ -28,27 +37,59 @@ const entregablesCompletados = entregables.filter((e) => e.estado === 'Completad
 const entregablesEnProceso = entregables.filter((e) => e.estado === 'En proceso').length;
 const entregablesPendientes = entregables.filter((e) => e.estado === 'Pendiente').length;
 
-const objetivosEnProceso = objetivos.filter((o) => o.estado === 'En proceso').length;
+const resumenesEquipo = getResumenEquipo();
+const conEquipo = getActividadesConEquipo().length;
+const compartidas = getActividadesCompartidas().length;
 
-const actividadesRecientes = actividades.slice(0, 6);
+const actividadesClave = actividades.slice(0, 6);
 const riesgosActivos = riesgos.filter((r) => r.estado !== 'Mitigado').slice(0, 3);
+
+/** Avance real por objetivo (null = sin dato de ejecución). */
+const avanceRealPorObjetivo = new Map<number, number | null>(
+  objetivos.map((o) => [o.id, getAvanceCalculado(actividades.filter((a) => a.objetivoId === o.id))]),
+);
 ---
 <DashboardLayout
   title="Panel ejecutivo"
   subtitle="Seguimiento general del módulo de Marketing del ERP Almacenes Éxito."
 >
-  <DemoNote text="Los valores mostrados como 'Demo' (porcentajes de avance, ejecutado de presupuesto, etc.) son datos de demostración para visualizar el dashboard y no representan información oficial del proyecto." />
-
   <section class="section" style="margin-top:0">
-    <div class="grid grid-3">
+    <div class="section-title">
+      <h2>Resumen general</h2>
+      <span class="table-muted">Datos calculados desde objetivos, actividades y participantes</span>
+    </div>
+    <div class="grid grid-4">
       <StatCard
-        title="Avance general"
-        value={`${presupuestoGeneral.porcentajeEjecucion}%`}
+        title="Avance programado"
+        value={formatPorcentaje(getAvanceProgramadoGlobal())}
         icon="gauge"
-        tone="primary"
-        to="/dashboard/objetivos"
-        demo
-        caption="Ejecución global de los 5 objetivos"
+        tone="info"
+        to="/dashboard/cronograma"
+        caption={`Cronograma al ${FECHA_CORTE} · medida de calendario, no ejecución`}
+      />
+      <StatCard
+        title="Avance real"
+        value={avanceGeneral === null ? 'No calculado' : `${avanceGeneral} %`}
+        icon="gauge"
+        tone={avanceGeneral === null ? 'neutral' : 'primary'}
+        to="/dashboard/avance"
+        caption={`Reportado en ${coberturaReal.reportadas} de ${coberturaReal.total} actividades`}
+      />
+      <StatCard
+        title="Desviación (real − programado)"
+        value={desviacionGlobal.promedio === null
+          ? 'Sin datos'
+          : `${desviacionGlobal.promedio > 0 ? '+' : ''}${desviacionGlobal.promedio} pp`}
+        icon="target"
+        tone={desviacionGlobal.promedio === null
+          ? 'neutral'
+          : desviacionGlobal.promedio < 0
+            ? 'warning'
+            : 'success'}
+        to="/dashboard/avance"
+        caption={desviacionGlobal.promedio === null
+          ? 'Se necesita avance real para comparar'
+          : `${desviacionGlobal.atrasado} atrasadas · ${desviacionGlobal.enLinea} en línea · ${desviacionGlobal.adelantado} adelantadas`}
       />
       <StatCard
         title="Actividades"
@@ -56,16 +97,15 @@ const riesgosActivos = riesgos.filter((r) => r.estado !== 'Mitigado').slice(0, 3
         icon="list"
         tone="info"
         to="/dashboard/actividades"
-        caption={`${enProceso} en proceso · ${noIniciadas} no iniciadas${completadas ? ` · ${completadas} completadas` : ''}${retrasadas ? ` · ${retrasadas} retrasadas` : ''}`}
+        caption={`${estados.enProceso} en proceso · ${estados.pendientes} no iniciadas · ${estados.completadas} completadas`}
       />
       <StatCard
         title="Presupuesto"
-        value="$18.300.000"
+        value={formatMoney(presupuestoTotal)}
         icon="coins"
         tone="success"
         to="/dashboard/presupuesto"
-        demo
-        caption={`Ejecutado ${presupuestoGeneral.porcentajeEjecucion}% · Pendiente ${formatMoney(presupuestoGeneral.pendiente)}`}
+        caption={`${objetivos.length} objetivos · ${totalActividades} actividades`}
       />
     </div>
     <div class="grid grid-3" style="margin-top:16px">
@@ -86,19 +126,19 @@ const riesgosActivos = riesgos.filter((r) => r.estado !== 'Mitigado').slice(0, 3
         caption={`${entregablesCompletados} completados · ${entregablesEnProceso} en proceso · ${entregablesPendientes} pendientes`}
       />
       <StatCard
-        title="Objetivos"
-        value={objetivos.length}
-        icon="target"
-        tone="info"
-        to="/dashboard/objetivos"
-        caption={`${objetivosEnProceso} en proceso · ${objetivos.length - objetivosEnProceso} en preparación`}
+        title="Equipo"
+        value={resumenesEquipo.length}
+        icon="team"
+        tone="primary"
+        to="/dashboard/equipo"
+        caption={`${conEquipo} de ${totalActividades} actividades con el equipo`}
       />
     </div>
   </section>
 
   <section class="section">
     <div class="section-title">
-      <h2>Progreso por objetivo</h2>
+      <h2>Objetivos</h2>
       <a class="as-link" href="/dashboard/objetivos">Ver todos →
       </a>
     </div>
@@ -108,46 +148,173 @@ const riesgosActivos = riesgos.filter((r) => r.estado !== 'Mitigado').slice(0, 3
   </section>
 
   <section class="section">
+    <div class="section-title">
+      <h2>Participación del equipo</h2>
+      <a class="as-link" href="/dashboard/equipo">Ver equipo →
+      </a>
+    </div>
+    <div class="grid grid-2">
+      <TeamParticipationCard
+        resumenes={resumenesEquipo}
+        cta="Ver equipo"
+        to="/dashboard/equipo"
+        conEquipo={conEquipo}
+        compartidas={compartidas}
+        totalActividades={totalActividades}
+      />
+      <div class="card">
+        <h3>Participación por objetivo</h3>
+        <p class="card-sub">
+          Promedio de cada integrante dentro de cada objetivo (0 % cuando no participa). La
+          participación no es avance.
+        </p>
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Objetivo</th>
+                {resumenesEquipo.map((r) => <th style="text-align:right">{r.participante.nombreCorto}</th>)}
+                <th style="text-align:right" title="Tiempo planificado consumido hasta la fecha de corte">Avance prog.</th>
+                <th style="text-align:right" title="Avance real reportado por el equipo">Avance real</th>
+                <th style="text-align:right">Presupuesto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {objetivos.map((o) => (
+                <tr>
+                  <td><a class="table-link" href={`/objetivos/${o.id}`}>Objetivo {o.numero}</a></td>
+                  {resumenesEquipo.map((r) => (
+                    <td style="text-align:right;font-variant-numeric:tabular-nums">
+                      {formatPorcentaje(
+                        r.participacionPorObjetivo.find((p) => p.objetivoId === o.id)?.porcentaje ?? 0
+                      )}
+                    </td>
+                  ))}
+                  <td style="text-align:right;font-variant-numeric:tabular-nums">
+                    {formatPorcentaje(getAvanceProgramadoObjetivo(o.id))}
+                  </td>
+                  <td style="text-align:right;font-variant-numeric:tabular-nums">
+                    {avanceRealPorObjetivo.get(o.id) === null
+                      ? 'No calculado'
+                      : `${avanceRealPorObjetivo.get(o.id)} %`}
+                  </td>
+                  <td style="text-align:right">{formatMoney(getPresupuestoObjetivo(o.id).total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="prog-note">
+          Avance prog.: tiempo planificado consumido hasta la fecha de corte ({FECHA_CORTE}); es
+          calendario, no ejecución. Avance real: se registra en
+          <a class="as-link" href="/dashboard/avance">Avance real</a> y, sin dato, se muestra "No
+          calculado" (nunca 0 %).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Entregables</h2>
+      <a class="as-link" href="/dashboard/entregables">Ver todos →
+      </a>
+    </div>
+    <div class="card">
+      <p class="card-sub">
+        Productos y documentos del proyecto. Son un concepto distinto a la participación del equipo.
+      </p>
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Entregable</th>
+              <th>Objetivo</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entregables.map((e) => {
+              const obj = e.objetivoId ? getObjetivo(e.objetivoId) : undefined;
+              return (
+                <tr>
+                  <td><span class="table-link">{e.nombre}</span></td>
+                  <td>{obj ? `Objetivo ${obj.numero}` : 'General'}</td>
+                  <td>{formatDate(e.fecha)}</td>
+                  <td><StatusBadge status={e.estado} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
     <div class="grid grid-2">
       <div class="card">
-        <h3>Actividades recientes</h3>
-        <p class="card-sub">Primeras actividades del módulo. Haz clic para ver el detalle.</p>
+        <h3>Actividades por objetivo</h3>
+        <p class="card-sub">Primeras actividades del módulo con su estado y participantes.</p>
         <div class="table-scroll">
           <table class="table">
             <thead>
               <tr>
                 <th>Actividad</th>
                 <th>Objetivo</th>
-                <th>Avance</th>
+                <th class="table-num">Avance real</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {actividadesRecientes.map((a) => {
+              {actividadesClave.map((a) => {
                 const obj = getObjetivo(a.objetivoId);
                 return (
                   <tr>
                     <td><a class="table-link" href={`/actividades/${a.id}`}>{a.nombre}</a></td>
                     <td>{obj ? `Objetivo ${obj.numero}` : 'General'}</td>
-                    <td style="width:150px"><ProgressBar value={a.avance} /></td>
-                    <td><StatusBadge status={a.estado} /></td>
+                    <td class="table-num">
+                      {typeof a.avance === 'number' ? `${a.avance} %` : 'No calculado'}
+                    </td>
+                    <td><StatusBadge status={a.estado ?? 'Sin estado registrado'} /></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+        <div style="margin-top:12px"><a class="btn btn-ghost" href="/dashboard/actividades">Ver actividades →</a></div>
       </div>
 
       <div class="card">
-        <h3>Riesgos a monitorear
-          <span style="margin-left:8px"><DemoBadge /></span>
-        </h3>
+        <h3>Riesgos a monitorear</h3>
         <p class="card-sub">Riesgos activos o en seguimiento, alineados con los objetivos del módulo.</p>
         <div style="display:flex;flex-direction:column;gap:12px">
           {riesgosActivos.map((r) => <RiskCard riesgo={r} />)}
         </div>
+        <div style="margin-top:12px"><a class="btn btn-ghost" href="/dashboard/riesgos">Ver riesgos →</a></div>
       </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Otras secciones</h2>
+    </div>
+    <div class="grid grid-3">
+      <a class="card nav-card" href="/dashboard/stakeholders">
+        <h3>Stakeholders</h3>
+        <p class="card-sub">Actores internos y externos del área de Marketing.</p>
+      </a>
+      <a class="card nav-card" href="/dashboard/marketing">
+        <h3>Indicadores de Marketing</h3>
+        <p class="card-sub">Clientes, campañas, conversión e indicadores del área.</p>
+      </a>
+      <a class="card nav-card" href="/dashboard/cronograma">
+        <h3>Cronograma</h3>
+        <p class="card-sub">Ventana del módulo con vista tipo Gantt.</p>
+      </a>
     </div>
   </section>
 </DashboardLayout>

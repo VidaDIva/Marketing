@@ -1,0 +1,31 @@
+---
+import { semforoDe, UMBRAL_EN_LINEA, type Semforo } from '../lib/desviacion';
+
+interface Props {
+  /** Desviación en puntos porcentuales, o `null` si no hay dato real. */
+  desviacion: number | null;
+  /** Oculta el texto largo y deja solo el valor. */
+  compact?: boolean;
+}
+
+const { desviacion, compact = false } = Astro.props as Props;
+
+const semaforo: Semforo = semforoDe(desviacion);
+
+const TEXTO: Record<Semforo, string> = {
+  adelantado: 'Adelantado',
+  'en-linea': 'En línea',
+  atrasado: 'Atrasado',
+  'sin-dato': 'Sin dato real',
+};
+
+const valor = desviacion === null ? '—' : `${desviacion > 0 ? '+' : ''}${desviacion.toFixed(1)} pp`;
+const titulo =
+  desviacion === null
+    ? 'No hay avance real reportado, así que no se puede comparar con el cronograma.'
+    : `Avance real menos avance programado. Dentro de ±${UMBRAL_EN_LINEA} pp se considera "en línea".`;
+---
+<span class={`desv-pill desv--${semaforo}`} title={titulo}>
+  <span class="desv-valor">{valor}</span>
+  {!compact && <span class="desv-txt">{TEXTO[semaforo]}</span>}
+</span>

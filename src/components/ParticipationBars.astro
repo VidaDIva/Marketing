@@ -1,0 +1,39 @@
+---
+import type { ParticipacionDetalle } from '../lib/participacion';
+import { formatPorcentaje } from '../lib/participacion';
+import ProgressBar from './ProgressBar.astro';
+
+interface Props {
+  /** Detalle de participación (participante + porcentaje). */
+  items: ParticipacionDetalle[];
+  /** Resaltar a los integrantes del equipo principal. */
+  highlight?: 'equipo' | 'externo' | 'todos';
+  showBar?: boolean;
+  compact?: boolean;
+}
+
+const { items, highlight = 'todos', showBar = true, compact = false } = Astro.props as Props;
+
+const visibles = items.filter((i) => highlight === 'todos' || i.tipo === highlight);
+---
+{visibles.length === 0 ? (
+  <div class="empty-state">Sin datos de participación.</div>
+) : (
+  <ul class:list={['part-list', { 'part-list--compact': compact }]}>
+    {visibles.map((i) => (
+      <li class="part-row">
+        <span class:list={['part-avatar', `part-avatar--${i.tipo}`]} aria-hidden="true">{i.participante.iniciales}</span>
+        <span class="part-body">
+          <span class="part-name">
+            {i.participante.nombreCorto}
+            {i.tipo === 'externo' && <span class="part-tag">Externo</span>}
+          </span>
+          {showBar && (
+            <ProgressBar value={i.porcentaje} prefix="Participación" decimals={2} tone="info" showLabel={false} />
+          )}
+        </span>
+        <span class="part-val">{formatPorcentaje(i.porcentaje)}</span>
+      </li>
+    ))}
+  </ul>
+)}

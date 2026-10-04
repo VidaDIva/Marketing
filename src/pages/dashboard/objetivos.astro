@@ -3,23 +3,45 @@ import DataTable from '../../components/DataTable.astro';
 import ObjectiveCard from '../../components/ObjectiveCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { objetivos } from '../../data/objetivos';
-import { getPresupuestoObjetivo } from '../../data/presupuesto';
-import { formatDate, formatMoney } from '../../lib/helpers';
+import { getPresupuestoObjetivo, getPorcentajeDelTotal } from '../../data/presupuesto';
+import { formatDate, formatMoney, rangoAvance, RANGOS_AVANCE } from '../../lib/helpers';
+import {
+  formatPorcentaje,
+  getActividadesPorObjetivo,
+  getCoberturaAvanceReal,
+  getResumenObjetivo,
+} from '../../lib/participacion';
+import { FECHA_CORTE } from '../../lib/progreso';
+import { formatDesviacion, getDesviacionObjetivo } from '../../lib/desviacion';
 
-const tableRows = objetivos.map((o) => ({
-  numero: `Objetivo ${o.numero}`,
-  nombre: o.nombre,
-  responsable: o.responsable,
-  ventana: `${formatDate(o.fechaInicio)} → ${formatDate(o.fechaFinal)}`,
-  estado: o.estado,
-  avance: `${o.avance}%`,
-  presupuesto: formatMoney(getPresupuestoObjetivo(o.id)?.total ?? 0),
-  id: o.id,
-}));
+const resumenes = objetivos.map((o) => ({ objetivo: o, resumen: getResumenObjetivo(o.id) }));
+
+const tableRows = resumenes.map(({ objetivo, resumen }) => {
+  const cobertura = getCoberturaAvanceReal(getActividadesPorObjetivo(objetivo.id));
+  return {
+    numero: `Objetivo ${objetivo.numero}`,
+    nombre: objetivo.nombre,
+    actividades: resumen.totalActividades,
+    sarrazola: formatPorcentaje(resumen.participacionEquipo[0]?.porcentaje ?? 0),
+    orrego: formatPorcentaje(resumen.participacionEquipo[1]?.porcentaje ?? 0),
+    atehortua: formatPorcentaje(resumen.participacionEquipo[2]?.porcentaje ?? 0),
+    avanceReal: resumen.avanceReal === null ? 'No calculado' : `${resumen.avanceReal} %`,
+    avanceRealFiltro:
+      resumen.avanceReal === null ? 'Sin dato real' : rangoAvance(resumen.avanceReal),
+    cobertura: `${cobertura.reportadas} / ${cobertura.total}`,
+    desviacion: formatDesviacion(getDesviacionObjetivo(objetivo.id)),
+    avanceProg: formatPorcentaje(resumen.avanceProgramado),
+    estado: resumen.estado,
+    presupuesto: formatMoney(getPresupuestoObjetivo(objetivo.id).total),
+    porcentaje: `${getPorcentajeDelTotal(objetivo.id)} %`,
+    ventana: `${formatDate(objetivo.fechaInicio)} → ${formatDate(objetivo.fechaFinal)}`,
+    id: objetivo.id,
+  };
+});
 ---
 <DashboardLayout
   title="Objetivos del módulo"
-  subtitle="Los cinco objetivos que orientan el desarrollo del módulo de Marketing."
+  subtitle="Los cinco objetivos que orientan el desarrollo del módulo de Marketing, con sus actividades y la participación calculada del equipo."
 >
   <section>
     <div class="grid grid-2">
@@ -30,21 +52,46 @@ const tableRows = objetivos.map((o) => ({
   <section class="section">
     <div class="section-title">
       <h2>Resumen por objetivo</h2>
+      <span class="table-muted">
+        Participación = promedio del integrante en las actividades del objetivo (0 % si no participa).
+      </span>
     </div>
     <DataTable
       columns={[
         { label: 'Objetivo', key: 'numero' },
         { label: 'Nombre', key: 'nombre' },
-        { label: 'Responsable', key: 'responsable' },
-        { label: 'Ventana', key: 'ventana' },
+        { label: 'Actividades', key: 'actividades', align: 'right' },
+        { label: 'Sarrazola', key: 'sarrazola', align: 'right' },
+        { label: 'Orrego', key: 'orrego', align: 'right' },
+        { label: 'Atehortua', key: 'atehortua', align: 'right' },
+        { label: 'Avance real', key: 'avanceReal', align: 'right' },
+        { label: 'Cobertura', key: 'cobertura', align: 'right' },
+        { label: 'Desviación', key: 'desviacion', align: 'right' },
+        { label: 'Avance prog.', key: 'avanceProg', align: 'right' },
         { label: 'Estado', key: 'estado', badge: true },
-        { label: 'Avance', key: 'avance' },
-        { label: 'Presupuesto', key: 'presupuesto' },
+        { label: 'Presupuesto', key: 'presupuesto', align: 'right' },
+        { label: '% del total', key: 'porcentaje', align: 'right' },
       ]}
       rows={tableRows}
       link={(row) => `/objetivos/${(row as any).id}`}
+      linkLabel="Ver"
+      filters={[
+        {
+          label: 'Avance real',
+          col: 'avanceReal',
+          valueKey: 'avanceRealFiltro',
+          options: RANGOS_AVANCE.filter((r) => tableRows.some((t) => t.avanceRealFiltro === r)).concat(
+            tableRows.some((t) => t.avanceRealFiltro === 'Sin dato real') ? ['Sin dato real'] : [],
+          ),
+        },
+      ]}
       searchable={false}
       empty="No hay objetivos registrados."
     />
+    <p class="prog-note">
+      Avance real: promedio de las actividades del objetivo con ejecución reportada; "No calculado"
+      significa que ninguna tiene dato, y la columna Cobertura dice cuántas hay. Avance prog.: tiempo
+      planificado consumido hasta la fecha de corte ({FECHA_CORTE}); es calendario, no ejecución.
+    </p>
   </section>
 </DashboardLayout>

@@ -1,274 +1,105 @@
-import type { Actividad } from './types';
+import type { Actividad, Participacion } from './types';
+import { objetivos } from './objetivos';
+import { distribuirVentana } from '../lib/fechas';
+import { getRegistroReal, validarRegistro } from '../lib/avance-real';
 
-export const actividades: Actividad[] = [
-  {
-    id: 1,
-    nombre: 'Revisión de procesos y actividades del área de Marketing',
-    descripcion:
-      'Levantamiento de los procesos y actividades que opera actualmente el área de Marketing de Almacenes Éxito.',
-    objetivoId: 1,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-15',
-    fechaFinal: '2026-08-18',
-    estado: 'En proceso',
-    avance: 60,
-    presupuesto: 700000,
-    entregableId: 2,
-    riesgosIds: [1],
-  },
-  {
-    id: 2,
-    nombre: 'Inventario de recursos, canales y estrategias actuales',
-    descripcion:
-      'Registro de recursos humanos, tecnológicos, canales digitales y estrategias vigentes del área.',
-    objetivoId: 1,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-17',
-    fechaFinal: '2026-08-20',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 950000,
-    entregableId: 2,
-    riesgosIds: [1],
-  },
-  {
-    id: 3,
-    nombre: 'Diagnóstico del área y elaboración del informe de análisis',
-    descripcion:
-      'Consolidación del diagnóstico con hallazgos, brechas y oportunidades del área de Marketing.',
-    objetivoId: 1,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-20',
-    fechaFinal: '2026-08-22',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1200000,
-    entregableId: 3,
-    riesgosIds: [1],
-  },
-  {
-    id: 4,
-    nombre: 'Identificación de stakeholders internos y externos',
-    descripcion:
-      'Identificación de los actores internos y externos relacionados con el área de Marketing.',
-    objetivoId: 2,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-23',
-    fechaFinal: '2026-08-25',
-    estado: 'En proceso',
-    avance: 40,
-    presupuesto: 800000,
-    entregableId: 5,
-    riesgosIds: [2],
-  },
-  {
-    id: 5,
-    nombre: 'Análisis de necesidades, expectativas e influencia',
-    descripcion:
-      'Análisis de necesidades, expectativas, responsabilidades e influencia de cada stakeholder.',
-    objetivoId: 2,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-25',
-    fechaFinal: '2026-08-27',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1150000,
-    entregableId: 5,
-    riesgosIds: [2],
-  },
-  {
-    id: 6,
-    nombre: 'Construcción de la matriz de stakeholders',
-    descripcion:
-      'Elaboración de la matriz final de stakeholders y del plan de gestión de expectativas.',
-    objetivoId: 2,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-26',
-    fechaFinal: '2026-08-27',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1100000,
-    entregableId: 5,
-    riesgosIds: [2],
-  },
-  {
-    id: 7,
-    nombre: 'Levantamiento de datos de clientes',
-    descripcion:
-      'Inventario y revisión de la información de clientes disponible en los sistemas del área.',
-    objetivoId: 3,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-28',
-    fechaFinal: '2026-08-30',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 900000,
-    entregableId: 2,
-    riesgosIds: [3, 6],
-  },
-  {
-    id: 8,
-    nombre: 'Análisis de campañas y ventas (conversión)',
-    descripcion:
-      'Evaluación del rendimiento de campañas, ventas y tasas de conversión del área.',
-    objetivoId: 3,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-29',
-    fechaFinal: '2026-09-01',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1200000,
-    entregableId: 2,
-    riesgosIds: [3],
-  },
-  {
-    id: 9,
-    nombre: 'Evaluación del comportamiento del consumidor',
-    descripcion:
-      'Análisis del comportamiento del consumidor, segmentos y hábitos de compra.',
-    objetivoId: 3,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-08-30',
-    fechaFinal: '2026-09-02',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 950000,
-    entregableId: 2,
-    riesgosIds: [3],
-  },
-  {
-    id: 10,
-    nombre: 'Evaluación de analítica y resultados del área',
-    descripcion:
-      'Revisión de los indicadores, reportes y analítica que gestiona hoy el área de Marketing.',
-    objetivoId: 3,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-01',
-    fechaFinal: '2026-09-02',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 900000,
-    entregableId: 2,
-    riesgosIds: [3],
-  },
-  {
-    id: 11,
-    nombre: 'Evaluación de herramientas de personalización',
-    descripcion:
-      'Análisis de herramientas y capacidades de personalización aplicables al área.',
-    objetivoId: 4,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-03',
-    fechaFinal: '2026-09-04',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 850000,
-    entregableId: 4,
-    riesgosIds: [4, 7],
-  },
-  {
-    id: 12,
-    nombre: 'Análisis de IA, modelos predictivos y recomendación',
-    descripcion:
-      'Evaluación de inteligencia artificial, análisis predictivo y sistemas de recomendación.',
-    objetivoId: 4,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-04',
-    fechaFinal: '2026-09-05',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1450000,
-    entregableId: 4,
-    riesgosIds: [4],
-  },
-  {
-    id: 13,
-    nombre: 'Evaluación de estrategias omnicanal',
-    descripcion:
-      'Análisis de estrategias omnicanal y su integración con tienda, web, app y redes.',
-    objetivoId: 4,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-05',
-    fechaFinal: '2026-09-06',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 750000,
-    entregableId: 4,
-    riesgosIds: [4],
-  },
-  {
-    id: 14,
-    nombre: 'Propuesta del stack tecnológico para Marketing',
-    descripcion:
-      'Consolidación de la propuesta tecnológica del módulo de Marketing en el ERP.',
-    objetivoId: 4,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-06',
-    fechaFinal: '2026-09-06',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 650000,
-    entregableId: 4,
-    riesgosIds: [4],
-  },
-  {
-    id: 15,
-    nombre: 'Diseño de la propuesta de mejoras',
-    descripcion:
-      'Diseño de mejoras de procesos, datos y tecnología para el módulo de Marketing.',
-    objetivoId: 5,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-07',
-    fechaFinal: '2026-09-09',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1550000,
-    entregableId: 6,
-    riesgosIds: [5],
-  },
-  {
-    id: 16,
-    nombre: 'Propuesta para la experiencia del cliente',
-    descripcion:
-      'Propuestas de fidelización y mejora de la experiencia del cliente en todos los canales.',
-    objetivoId: 5,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-09',
-    fechaFinal: '2026-09-10',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1100000,
-    entregableId: 6,
-    riesgosIds: [5],
-  },
-  {
-    id: 17,
-    nombre: 'Documentación y cierre del módulo de Marketing',
-    descripcion:
-      'Consolidación documental de todo el trabajo del módulo y alimentación del documento final.',
-    objetivoId: 5,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-11',
-    fechaFinal: '2026-09-12',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 1250000,
-    entregableId: 7,
-    riesgosIds: [5],
-  },
-  {
-    id: 18,
-    nombre: 'Presentación de resultados a stakeholders',
-    descripcion:
-      'Socialización de resultados, propuestas y siguientes pasos con los stakeholders del módulo.',
-    objetivoId: 5,
-    responsable: 'Juan David Sarrazola Fernandez',
-    fechaInicio: '2026-09-12',
-    fechaFinal: '2026-09-12',
-    estado: 'No iniciada',
-    avance: 0,
-    presupuesto: 850000,
-    entregableId: 7,
-    riesgosIds: [5],
-  },
-];
+/**
+ * Actividades del módulo de Marketing (datos oficiales del proyecto).
+ *
+ * Cada actividad tiene: objetivo, participantes con su porcentaje de
+ * participación y presupuesto. La suma de los porcentajes de una actividad
+ * es 100 %.
+ *
+ * Lo que NO existe en el documento y por eso NO se inventa:
+ * - Estado de ejecución  → el campo `estado` queda sin valor.
+ * - Avance / porcentaje de ejecución → el campo `avance` queda sin valor.
+ *   Ambos se toman del REGISTRO de avance real (`data/avance-real.json`), que
+ *   se actualiza a mano desde `/dashboard/avance`. Con el registro vacío, ambas
+ *   propiedades quedan en `undefined` y la interfaz dice "No calculado".
+ * - Fechas por actividad → se DERIVAN de la ventana de cada objetivo con
+ *   `distribuirVentana` (secuencial, determinista) para que el cronograma
+ *   siga siendo funcional.
+ * - Entregable y riesgos por actividad → se consultan por objetivo.
+ */
+
+interface ActividadSpec {
+  nombre: string;
+  participaciones: Participacion[];
+  presupuesto: number;
+}
+
+const porObjetivo: Record<number, ActividadSpec[]> = {
+  1: [
+    { nombre: 'Identificar los principales procesos del área de Marketing', participaciones: [{ participanteId: 2, porcentaje: 100 }], presupuesto: 400000 },
+    { nombre: 'Identificar las actividades asociadas a cada proceso', participaciones: [{ participanteId: 1, porcentaje: 100 }], presupuesto: 350000 },
+    { nombre: 'Identificar recursos utilizados por el área', participaciones: [{ participanteId: 3, porcentaje: 100 }], presupuesto: 400000 },
+    { nombre: 'Identificar canales de comunicación y promoción', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 4, porcentaje: 50 }], presupuesto: 500000 },
+    { nombre: 'Analizar estrategias actuales de Marketing', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 4, porcentaje: 50 }], presupuesto: 650000 },
+    { nombre: 'Consolidar la información y elaborar el diagnóstico', participaciones: [{ participanteId: 2, porcentaje: 33.33 }, { participanteId: 1, porcentaje: 33.33 }, { participanteId: 3, porcentaje: 33.33 }], presupuesto: 550000 },
+  ],
+  2: [
+    { nombre: 'Identificar las áreas internas relacionadas con Marketing', participaciones: [{ participanteId: 2, porcentaje: 100 }], presupuesto: 300000 },
+    { nombre: 'Identificar los actores externos relacionados con Marketing', participaciones: [{ participanteId: 1, porcentaje: 100 }], presupuesto: 350000 },
+    { nombre: 'Definir necesidades y expectativas de cada stakeholder', participaciones: [{ participanteId: 3, porcentaje: 50 }, { participanteId: 4, porcentaje: 50 }], presupuesto: 500000 },
+    { nombre: 'Identificar responsabilidades y participación', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 450000 },
+    { nombre: 'Analizar nivel de influencia e interés', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 4, porcentaje: 50 }], presupuesto: 500000 },
+    { nombre: 'Establecer relaciones entre stakeholders y procesos de Marketing', participaciones: [{ participanteId: 3, porcentaje: 50 }, { participanteId: 6, porcentaje: 50 }], presupuesto: 550000 },
+    { nombre: 'Consolidar la información', participaciones: [{ participanteId: 2, porcentaje: 33.33 }, { participanteId: 1, porcentaje: 33.33 }, { participanteId: 3, porcentaje: 33.33 }], presupuesto: 400000 },
+  ],
+  3: [
+    { nombre: 'Identificar las fuentes de información utilizadas por Marketing', participaciones: [{ participanteId: 2, porcentaje: 100 }], presupuesto: 350000 },
+    { nombre: 'Identificar los datos generados sobre clientes y consumidores', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 500000 },
+    { nombre: 'Identificar información relacionada con campañas y promociones', participaciones: [{ participanteId: 3, porcentaje: 100 }], presupuesto: 400000 },
+    { nombre: 'Identificar indicadores utilizados para medir resultados', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 4, porcentaje: 50 }], presupuesto: 450000 },
+    { nombre: 'Analizar cómo se recopila y administra la información', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 6, porcentaje: 50 }], presupuesto: 550000 },
+    { nombre: 'Analizar disponibilidad, calidad e integración de los datos', participaciones: [{ participanteId: 3, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 650000 },
+    { nombre: 'Identificar oportunidades para mejorar el uso de los datos', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 600000 },
+    { nombre: 'Consolidar los resultados del análisis', participaciones: [{ participanteId: 2, porcentaje: 33.33 }, { participanteId: 1, porcentaje: 33.33 }, { participanteId: 3, porcentaje: 33.33 }], presupuesto: 450000 },
+  ],
+  4: [
+    { nombre: 'Identificar las tecnologías actualmente utilizadas en el área de Marketing', participaciones: [{ participanteId: 2, porcentaje: 100 }], presupuesto: 350000 },
+    { nombre: 'Identificar necesidades y oportunidades de aplicación de nuevas tecnologías', participaciones: [{ participanteId: 1, porcentaje: 100 }], presupuesto: 450000 },
+    { nombre: 'Analizar herramientas tecnológicas para la personalización de promociones', participaciones: [{ participanteId: 4, porcentaje: 100 }], presupuesto: 600000 },
+    { nombre: 'Analizar tecnologías para el conocimiento y segmentación de clientes', participaciones: [{ participanteId: 3, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 650000 },
+    { nombre: 'Analizar tecnologías aplicables a la fidelización y optimización de campañas', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 7, porcentaje: 50 }], presupuesto: 750000 },
+    { nombre: 'Evaluar el aporte de las tecnologías a la toma de decisiones de Marketing', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 500000 },
+    { nombre: 'Consolidar las oportunidades tecnológicas identificadas', participaciones: [{ participanteId: 2, porcentaje: 33.33 }, { participanteId: 1, porcentaje: 33.33 }, { participanteId: 3, porcentaje: 33.33 }], presupuesto: 400000 },
+  ],
+  5: [
+    { nombre: 'Identificar las principales oportunidades de mejora en los procesos de Marketing', participaciones: [{ participanteId: 2, porcentaje: 100 }], presupuesto: 400000 },
+    { nombre: 'Analizar oportunidades para fortalecer la relación con las partes interesadas', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 4, porcentaje: 50 }], presupuesto: 550000 },
+    { nombre: 'Identificar estrategias para mejorar el aprovechamiento de los datos disponibles', participaciones: [{ participanteId: 3, porcentaje: 50 }, { participanteId: 5, porcentaje: 50 }], presupuesto: 650000 },
+    { nombre: 'Proponer estrategias para aprovechar las tecnologías disponibles', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 6, porcentaje: 50 }], presupuesto: 700000 },
+    { nombre: 'Diseñar estrategias para mejorar los resultados de las campañas de Marketing', participaciones: [{ participanteId: 1, porcentaje: 50 }, { participanteId: 7, porcentaje: 50 }], presupuesto: 800000 },
+    { nombre: 'Proponer acciones para mejorar la experiencia y fidelización del cliente', participaciones: [{ participanteId: 4, porcentaje: 100 }], presupuesto: 600000 },
+    { nombre: 'Priorizar las estrategias de mejora según impacto y viabilidad', participaciones: [{ participanteId: 2, porcentaje: 33.33 }, { participanteId: 1, porcentaje: 33.33 }, { participanteId: 3, porcentaje: 33.33 }], presupuesto: 450000 },
+    { nombre: 'Consolidar las propuestas y elaborar el plan de mejora', participaciones: [{ participanteId: 2, porcentaje: 50 }, { participanteId: 1, porcentaje: 50 }], presupuesto: 600000 },
+  ],
+};
+
+let siguienteId = 1;
+
+export const actividades: Actividad[] = objetivos.flatMap((objetivo) => {
+  const specs = porObjetivo[objetivo.id] ?? [];
+  const ventanas = distribuirVentana(objetivo.fechaInicio, objetivo.fechaFinal, specs.length);
+  return specs.map((spec, i) => {
+    const id = siguienteId++;
+    const real = getRegistroReal(id);
+    return {
+      id,
+      nombre: spec.nombre,
+      objetivoId: objetivo.id,
+      participaciones: spec.participaciones,
+      presupuesto: spec.presupuesto,
+      fechaInicio: ventanas[i].fechaInicio,
+      fechaFinal: ventanas[i].fechaFinal,
+      // Ejecución reportada. `undefined` = sin dato, NO 0 %.
+      estado: real.estado ?? undefined,
+      avance: real.avance ?? undefined,
+    };
+  });
+});
+
+// Falla el build con un mensaje claro si `avance-real.json` quedó desactualizado
+// (actividad nueva sin entrada, o entrada de una actividad que ya no existe).
+validarRegistro(actividades.map((a) => a.id));

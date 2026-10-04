@@ -12,4 +12,11 @@ export const proyecto = {
   moduloInicio: '2026-08-15',
   moduloFinal: '2026-09-12',
   estado: 'En ejecución',
+  /**
+   * Fecha de corte del "avance programado" (cronograma).
+   * Es la fecha real de cierre del módulo de Marketing, por lo que a esta
+   * fecha el cronograma del módulo queda 100 % consumido. El avance real de
+   * ejecución NO se conoce: ese campo sigue vacío en las actividades.
+   */
+  fechaCorte: '2026-09-12',
 };

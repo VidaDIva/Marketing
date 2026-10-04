@@ -791,6 +791,245 @@ svg {
   flex-wrap: wrap;
 }
 
+/* ============ Participación ============ */
+
+.part-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.part-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.part-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-600);
+}
+.part-avatar--externo {
+  background: var(--c-neutral-soft);
+  color: var(--c-muted);
+}
+
+.part-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.part-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.part-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-faint);
+  background: var(--c-neutral-soft);
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.part-val {
+  font-size: 0.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+  min-width: 56px;
+  text-align: right;
+}
+
+.part-list--compact {
+  gap: 8px;
+}
+.part-list--compact .part-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.64rem;
+}
+
+.team-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.team-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--c-neutral-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.team-stat-k {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-muted);
+  font-weight: 700;
+}
+.team-stat-v {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.team-cta {
+  margin-top: 14px;
+}
+
+/* ============ Métricas ============ */
+
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.metric-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--c-neutral-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.metric-k {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+.metric-v {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.metric-note {
+  font-size: 0.72rem;
+  color: var(--c-faint);
+}
+
+/* ============ Tarjeta de objetivo (detalles) ============ */
+
+.objective-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+.objective-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--c-neutral-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.objective-metric-v {
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.objective-metric-k {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-muted);
+  font-weight: 700;
+}
+
+.objective-part {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-border);
+}
+.objective-part-k {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+.objective-part-row {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  align-items: center;
+  gap: 10px;
+}
+.objective-part-name {
+  font-size: 0.8rem;
+  color: var(--c-text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.objective-note {
+  font-size: 0.74rem;
+  color: var(--c-faint);
+}
+
+.objective-foot {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.objective-cta {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-primary-600);
+}
+
+.nav-card {
+  display: block;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.nav-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #b6e6d3;
+}
+.nav-card .card-sub {
+  margin-bottom: 0;
+}
+
 /* ============ Risk card ============ */
 
 .risk-card {
@@ -1200,11 +1439,21 @@ svg {
   font-weight: 700;
   color: #fff;
   cursor: help;
+  overflow: hidden;
+}
+/* Relleno interior = avance programado (calendario), no avance real. */
+.gantt-prog {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(15, 23, 42, 0.22);
+  border-right: 1px solid rgba(15, 23, 42, 0.35);
+  pointer-events: none;
 }
 .gantt-bar.bar-En { background: #3b82f6; }
 .gantt-bar.bar-Completada { background: #16a34a; }
 .gantt-bar.bar-Retrasada { background: #dc2626; }
 .gantt-bar.bar-No { background: #94a3b8; }
+.gantt-bar.bar-Sin { background: #cbd5e1; }
 
 .gantt-scale {
   display: grid;
@@ -1525,6 +1774,341 @@ body.landing-page {
   .detail-hero {
     grid-template-columns: 1fr;
     text-align: left;
+  }
+  .objective-metrics {
+    grid-template-columns: 1fr;
+  }
+  .objective-part-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+.objective-prog {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-border);
+}
+.objective-prog-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.objective-prog-val {
+  font-size: 0.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Leyenda del avance programado (calendario, no ejecución). */
+.prog-note {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--c-faint);
+  margin: 10px 0 0;
+}
+
+/* Comparación lado a lado: avance programado vs. avance real. */
+.prog-dual {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+.prog-dual-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.prog-dual-k {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+.prog-empty {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--c-muted);
+  background: var(--c-neutral-soft);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.part-sub {
+  font-size: 0.72rem;
+  color: var(--c-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Semáforo de desviación: avance real − avance programado. */
+.desv-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.desv--adelantado {
+  background: var(--c-success-soft, #e7f6ec);
+  color: #1c6b3c;
+  border-color: #bfe3cd;
+}
+.desv--en-linea {
+  background: var(--c-info-soft, #e8f1fb);
+  color: #1d4f80;
+  border-color: #c6dcf2;
+}
+.desv--atrasado {
+  background: var(--c-danger-soft, #fdecec);
+  color: #96201f;
+  border-color: #f3c9c8;
+}
+.desv--sin-dato {
+  background: var(--c-neutral-soft, #f1f3f6);
+  color: var(--c-muted, #5b6572);
+  border-color: var(--c-border, #dfe3e8);
+}
+.desv-txt {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* Formulario de registro de avance real. */
+.avance-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.avance-row {
+  display: grid;
+  grid-template-columns: 1fr 150px 110px 140px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.avance-row:last-child {
+  border-bottom: 0;
+}
+.avance-row-head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--c-muted);
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: 8px;
+}
+.avance-row[data-con-dato='false'] .avance-cell-nombre {
+  opacity: 0.85;
+}
+.avance-cell-nombre {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.avance-nombre {
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.avance-meta {
+  font-size: 0.72rem;
+  color: var(--c-faint);
+}
+.avance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.avance-live {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.avance-live .stat-value {
+  font-size: 1.4rem;
+}
+.avance-warn {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--c-warning-soft, #fdf6e3);
+  border: 1px solid #f0dfae;
+  color: #6b5312;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.avance-code {
+  display: block;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.76rem;
+  background: #1f2933;
+  color: #e6edf3;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre;
+}
+@media (max-width: 900px) {
+  .avance-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .avance-live {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --- Checklist de avance por objetivo y participante --- */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.checklist-obj {
+  border-left: 4px solid var(--c-primary, #2563eb);
+}
+.checklist-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.checklist-peso {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--c-text-soft, #64748b);
+  margin-top: 2px;
+}
+.checklist-cifras {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.checklist-cifra {
+  text-align: right;
+}
+.checklist-cifra-v {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.checklist-cifra-k {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--c-text-soft, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.checklist-acts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checklist-act {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.6fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--c-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.checklist-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  min-width: 0;
+}
+.checklist-check input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  cursor: pointer;
+}
+.checklist-check input:indeterminate {
+  accent-color: var(--c-warning, #d97706);
+}
+.checklist-act-nombre {
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.checklist-partes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 0.74rem;
+  color: var(--c-text-soft, #64748b);
+}
+.checklist-parte {
+  white-space: nowrap;
+}
+.checklist-act-avance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.checklist-act-real {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.checklist-act-real[data-sin-dato] {
+  color: var(--c-text-soft, #64748b);
+  font-weight: 600;
+}
+.checklist-participantes {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--c-border, #e2e8f0);
+}
+@media (max-width: 900px) {
+  .checklist-act {
+    grid-template-columns: 1fr;
+  }
+  .checklist-act-avance {
+    align-items: flex-start;
+  }
+}
+
+.activity-table-wrap {
+  display: block;
+}
+
+.team-stats {
+    grid-template-columns: 1fr;
+  }
+  .part-row {
+    flex-wrap: wrap;
+  }
+  .part-val {
+    min-width: 0;
   }
 }
 

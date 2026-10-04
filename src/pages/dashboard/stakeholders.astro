@@ -4,6 +4,7 @@ import DemoBadge from '../../components/DemoBadge.astro';
 import StatCard from '../../components/StatCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { stakeholders } from '../../data/stakeholders';
+import { uniqueValues } from '../../lib/helpers';
 
 const internos = stakeholders.filter((s) => s.tipo === 'Interno').length;
 const externos = stakeholders.filter((s) => s.tipo === 'Externo').length;
@@ -50,9 +51,9 @@ const tableRows = stakeholders.map((s) => ({
     ]}
     rows={tableRows}
     filters={[
-      { label: 'Tipo', col: 'tipo', options: ['Interno', 'Externo'] },
+      { label: 'Tipo', col: 'tipo', options: uniqueValues(tableRows, (r) => r.tipo) },
       { label: 'Área', col: 'area', options: areas },
-      { label: 'Influencia', col: 'influencia', options: ['Alto', 'Medio', 'Bajo'] },
+      { label: 'Influencia', col: 'influencia', options: uniqueValues(tableRows, (r) => r.influencia) },
     ]}
     empty="No hay stakeholders que coincidan con el filtro."
   />

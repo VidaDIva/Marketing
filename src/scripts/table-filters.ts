@@ -14,7 +14,14 @@ export function setupTableFilters(root: HTMLElement): void {
       for (const sel of selects) {
         const col = sel.dataset.filterCol ?? '';
         const want = sel.value;
-        if (want && (row.dataset[`f${col}`] ?? '') !== want) {
+        if (!want) continue;
+        // El valor de la fila puede ser una lista separada por "|" (p. ej. varios
+        // participantes por actividad). Si lo es, basta con que coincida uno.
+        // Se lee con getAttribute porque el nombre se construye igual que en
+        // `DataTable.astro`; `dataset` no sirve para claves con guion variable.
+        const value = row.getAttribute(`data-f-${col}`) ?? '';
+        const candidates = value.includes('|') ? value.split('|') : [value];
+        if (!candidates.includes(want)) {
           ok = false;
           break;
         }

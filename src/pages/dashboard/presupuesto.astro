@@ -1,49 +1,83 @@
 ---
 import BudgetChart from '../../components/BudgetChart.astro';
-import DemoBadge from '../../components/DemoBadge.astro';
-import DemoNote from '../../components/DemoNote.astro';
 import DataTable from '../../components/DataTable.astro';
 import StatCard from '../../components/StatCard.astro';
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { objetivos } from '../../data/objetivos';
-import { presupuestoGeneral, presupuestoPorObjetivo } from '../../data/presupuesto';
+import { actividades } from '../../data/actividades';
+import {
+  getPresupuestoPromedioObjetivo,
+  getPresupuestoTotal,
+  getPresupuestosPorObjetivo,
+  getPorcentajeDelTotal,
+} from '../../data/presupuesto';
 import { formatMoney } from '../../lib/helpers';
 
-const budgetObj = objetivos.map((o) => {
-  const p = presupuestoPorObjetivo.find((x) => x.objetivoId === o.id);
-  return {
-    label: `Objetivo ${o.numero}`,
-    value: p?.total ?? 0,
-  };
-});
+const total = getPresupuestoTotal();
+const presupuestos = getPresupuestosPorObjetivo();
+
+const budgetObj = objetivos.map((o) => ({
+  label: `Objetivo ${o.numero}`,
+  value: presupuestos.find((p) => p.objetivoId === o.id)?.total ?? 0,
+}));
 
 const tableRows = objetivos.map((o) => {
-  const p = presupuestoPorObjetivo.find((x) => x.objetivoId === o.id);
-  const distribucion = p ? Math.round((p.total / presupuestoGeneral.total) * 100) : 0;
+  const p = presupuestos.find((x) => x.objetivoId === o.id);
+  const totalObj = p?.total ?? 0;
   return {
     objetivo: `Objetivo ${o.numero}`,
     nombre: o.nombre,
-    total: p ? formatMoney(p.total) : '-',
-    distribucion: `${distribucion}%`,
-    ejecutado: p ? formatMoney(p.ejecutado) : '-',
-    pendiente: p ? formatMoney(p.pendiente) : '-',
-    pct: p ? `${p.porcentajeEjecucion}%` : '-',
+    actividades: actividades.filter((a) => a.objetivoId === o.id).length,
+    total: formatMoney(totalObj),
+    porcentaje: `${getPorcentajeDelTotal(o.id)} %`,
+    id: o.id,
   };
 });
+
+const totalRow = {
+  objetivo: 'TOTAL',
+  nombre: 'Módulo de Marketing',
+  actividades: actividades.length,
+  total: formatMoney(total),
+  porcentaje: '100 %',
+};
 ---
 <DashboardLayout
   title="Presupuesto del módulo"
-  subtitle="Distribución del presupuesto por objetivo, con ejecución y saldos."
+  subtitle="Presupuesto total, distribución por objetivo y detalle por actividad. Todos los totales se calculan desde las actividades."
 >
-  <DemoNote text="El presupuesto total por objetivo es dato oficial del proyecto. Los montos ejecutados, pendientes y porcentajes de ejecución son valores DEMO para visualizar el comportamiento del presupuesto." />
-
   <section style="margin-bottom:20px">
     <div class="grid grid-4">
-      <StatCard title="Presupuesto total" value={formatMoney(presupuestoGeneral.total)} icon="coins" tone="primary" caption="Los cinco objetivos" />
-      <StatCard title="Ejecutado" value={formatMoney(presupuestoGeneral.ejecutado)} icon="coins" tone="success" demo caption="Monto DEMO según avance"
+      <StatCard
+        title="Presupuesto total"
+        value={formatMoney(total)}
+        icon="coins"
+        tone="primary"
+        caption={`${objetivos.length} objetivos · ${actividades.length} actividades`}
       />
-      <StatCard title="Pendiente" value={formatMoney(presupuestoGeneral.pendiente)} icon="coins" tone="warning" demo caption="Total menos ejecutado (DEMO)" />
-      <StatCard title="% de ejecución" value={`${presupuestoGeneral.porcentajeEjecucion}%`} icon="gauge" tone="info" demo caption="Proporción del total" />
+      <StatCard
+        title="Objetivos"
+        value={objetivos.length}
+        icon="target"
+        tone="info"
+        to="/dashboard/objetivos"
+        caption="Objetivos del módulo"
+      />
+      <StatCard
+        title="Actividades"
+        value={actividades.length}
+        icon="list"
+        tone="neutral"
+        to="/dashboard/actividades"
+        caption="Con presupuesto asignado"
+      />
+      <StatCard
+        title="Promedio por objetivo"
+        value={formatMoney(getPresupuestoPromedioObjetivo())}
+        icon="gauge"
+        tone="success"
+        caption="Total ÷ número de objetivos"
+      />
     </div>
   </section>
 
@@ -52,14 +86,14 @@ const tableRows = objetivos.map((o) => {
       <div class="card chart-card">
         <h3>Distribución del presupuesto</h3>
         <p class="chart-sub">Participación de cada objetivo en el total del módulo.</p>
-        <BudgetChart data={budgetObj} variant="donut" totalLabel={formatMoney(presupuestoGeneral.total)} />
+        <BudgetChart data={budgetObj} variant="donut" totalLabel={formatMoney(total)} />
       </div>
       <div class="card chart-card">
         <h3>Distribución acumulada</h3>
         <p class="chart-sub">Barra apilada con la participación porcentual por objetivo.</p>
         <BudgetChart data={budgetObj} variant="stacked" />
         <p class="card-sub" style="margin-top:16px">
-          <DemoBadge text="Ejecutado demo" tip="Los valores de ejecutado provienen de avances DEMO por objetivo." />
+          El gráfico se actualiza automáticamente si cambia el presupuesto de una actividad.
         </p>
       </div>
     </div>
@@ -67,20 +101,20 @@ const tableRows = objetivos.map((o) => {
 
   <section class="section">
     <div class="section-title">
-      <h2>Detalle por objetivo</h2>
+      <h2>Distribución por objetivo</h2>
+      <span class="table-muted">Porcentajes calculados sobre el total del módulo</span>
     </div>
     <DataTable
       columns={[
         { label: 'Objetivo', key: 'objetivo' },
         { label: 'Nombre', key: 'nombre' },
-        { label: 'Presupuesto total', key: 'total' },
-        { label: 'Distribución', key: 'distribucion' },
-        { label: 'Ejecutado (demo)', key: 'ejecutado' },
-        { label: 'Pendiente (demo)', key: 'pendiente' },
-        { label: 'Ejecución', key: 'pct' },
+        { label: 'Actividades', key: 'actividades', align: 'right' },
+        { label: 'Presupuesto', key: 'total', align: 'right' },
+        { label: '% del total', key: 'porcentaje', align: 'right' },
       ]}
-      rows={tableRows}
-      searchable={true}
+      rows={[...tableRows, totalRow]}
+      link={(row) => (row.id ? `/objetivos/${row.id}` : undefined)}
+      searchable={false}
       empty="No hay información de presupuesto."
     />
   </section>

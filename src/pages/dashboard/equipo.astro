@@ -1,0 +1,186 @@
+---
+import DataTable from '../../components/DataTable.astro';
+import StatCard from '../../components/StatCard.astro';
+import TeamParticipationCard from '../../components/TeamParticipationCard.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { actividades } from '../../data/actividades';
+import { equipoPrincipal, participantesExternos } from '../../data/participantes';
+import {
+  formatPorcentaje,
+  getActividadesCompartidas,
+  getActividadesConEquipo,
+  getParticipacionPromedioEquipo,
+  getResumenEquipo,
+} from '../../lib/participacion';
+import { FECHA_CORTE } from '../../lib/progreso';
+import { formatDesviacion, getDesviacionParticipante } from '../../lib/desviacion';
+
+const resumenes = getResumenEquipo();
+const totalActividades = actividades.length;
+const conEquipo = getActividadesConEquipo().length;
+const compartidas = getActividadesCompartidas().length;
+const promedioEquipo = getParticipacionPromedioEquipo();
+const avanceProgEquipo =
+  resumenes.reduce((s, r) => s + r.avanceProgramado, 0) / (resumenes.length || 1);
+/** Avance real del equipo: promedio de los integrantes con avance reportado. */
+const conAvanceReal = resumenes.filter((r) => r.avanceReal !== null);
+const avanceRealEquipo =
+  conAvanceReal.length === 0
+    ? null
+    : Math.round((conAvanceReal.reduce((s, r) => s + (r.avanceReal ?? 0), 0) / conAvanceReal.length) * 10) / 10;
+
+const tableRows = resumenes.map((r) => ({
+  integrante: r.participante.nombre,
+  iniciales: r.participante.iniciales,
+  actividades: r.actividadesAsignadas,
+  participacion: formatPorcentaje(r.participacionGeneral),
+  avanceReal: r.avanceReal === null ? 'No calculado' : `${r.avanceReal} %`,
+  cobertura: `${r.coberturaAvance.reportadas} / ${r.coberturaAvance.total}`,
+  avanceProg: formatPorcentaje(r.avanceProgramado),
+  desviacion: formatDesviacion(getDesviacionParticipante(r.participante.id)),
+  compartidas: r.actividadesCompartidas,
+  objetivos: r.objetivos.length,
+  id: r.participante.id,
+}));
+---
+<DashboardLayout
+  title="Participación del equipo"
+  subtitle="Los tres integrantes principales del módulo de Marketing y su participación calculada desde las actividades."
+>
+  <section style="margin-bottom:20px">
+    <div class="grid grid-4">
+      <StatCard
+        title="Integrantes"
+        value={equipoPrincipal.length}
+        icon="team"
+        tone="primary"
+        caption={`+ ${participantesExternos.length} participantes externos`}
+      />
+      <StatCard
+        title="Total de actividades"
+        value={totalActividades}
+        icon="list"
+        tone="info"
+        to="/dashboard/actividades"
+        caption="Actividades del módulo"
+      />
+      <StatCard
+        title="Actividades con el equipo"
+        value={conEquipo}
+        icon="users"
+        tone="success"
+        caption={`${totalActividades - conEquipo} con participación solo externa · ${compartidas} compartidas`}
+      />
+      <StatCard
+        title="Participación promedio"
+        value={formatPorcentaje(promedioEquipo)}
+        icon="gauge"
+        tone="warning"
+        caption="Promedio de los tres integrantes"
+      />
+    </div>
+    <div class="grid grid-2" style="margin-top:16px">
+      <StatCard
+        title="Avance programado del equipo"
+        value={formatPorcentaje(avanceProgEquipo)}
+        icon="gauge"
+        tone="info"
+        caption={`Cronograma al ${FECHA_CORTE} · calendario, no ejecución`}
+      />
+      <StatCard
+        title="Avance real del equipo"
+        value={avanceRealEquipo === null ? 'No calculado' : `${avanceRealEquipo} %`}
+        icon="gauge"
+        tone={avanceRealEquipo === null ? 'neutral' : 'primary'}
+        caption={avanceRealEquipo === null
+          ? 'Ningún integrante tiene avance reportado'
+          : `Promedio de ${conAvanceReal.length} de ${resumenes.length} integrantes con dato`}
+        to="/dashboard/avance"
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-title">
+      <h2>Tabla del equipo</h2>
+      <a class="as-link" href="/dashboard/actividades">Ver todas las actividades →
+      </a>
+    </div>
+    <p class="card-sub" style="margin-top:-6px;margin-bottom:12px">
+      Participación promedio = suma de sus porcentajes en todas las actividades del módulo ÷ número de
+      actividades. No es un porcentaje de avance.
+    </p>
+    <DataTable
+      columns={[
+        { label: 'Integrante', key: 'integrante' },
+        { label: 'Actividades', key: 'actividades', align: 'right' },
+        { label: 'Compartidas', key: 'compartidas', align: 'right' },
+        { label: 'Participación promedio', key: 'participacion', align: 'right' },
+        { label: 'Avance real', key: 'avanceReal', align: 'right' },
+        { label: 'Cobertura', key: 'cobertura', align: 'right' },
+        { label: 'Avance prog.', key: 'avanceProg', align: 'right' },
+        { label: 'Desviación', key: 'desviacion', align: 'right' },
+        { label: 'Objetivos', key: 'objetivos', align: 'right' },
+      ]}
+      rows={tableRows}
+      link={(row) => `/dashboard/equipo/${(row as any).id}`}
+      linkLabel="Ver detalle"
+      searchable={false}
+      empty="No hay integrantes registrados."
+    />
+    <p class="prog-note">
+      Avance real: promedio de las actividades del integrante con ejecución reportada; "No
+      calculado" significa que ninguna tiene dato, y la columna Cobertura dice cuántas hay. Avance
+      prog.: tiempo planificado consumido hasta la fecha de corte ({FECHA_CORTE}); es calendario, no
+      ejecución. La participación NO es avance.
+    </p>
+  </section>
+
+  <section class="section">
+    <div class="grid grid-2">
+      <TeamParticipationCard
+        resumenes={resumenes}
+        title="Participación del equipo"
+        cta="Ver detalle por integrante"
+        to="/dashboard/equipo"
+        conEquipo={conEquipo}
+        compartidas={compartidas}
+        totalActividades={totalActividades}
+      />
+      <div class="card">
+        <h3>Cómo se calcula</h3>
+        <div class="meta-list" style="margin-top:8px">
+          <div class="meta-row">
+            <span class="meta-k">Participación</span>
+            <span class="meta-v">Dato oficial por actividad (la suma de cada actividad es 100 %)</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-k">Participación promedio</span>
+            <span class="meta-v">Σ % del integrante ÷ nº de actividades del objetivo</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-k">Actividades compartidas</span>
+            <span class="meta-v">Actividades con más de un participante</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-k">Avance programado</span>
+            <span class="meta-v">
+              Tiempo planificado consumido ÷ duración planificada, a la fecha de corte ({FECHA_CORTE})
+            </span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-k">Avance real</span>
+            <span class="meta-v">
+              {avanceRealEquipo === null
+                ? 'No calculado (ninguna actividad con ejecución reportada)'
+                : `Promedio de las actividades reportadas de ${conAvanceReal.length} de ${resumenes.length} integrantes`}
+            </span>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <a class="btn btn-ghost" href="/dashboard/objetivos">Ver objetivos →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</DashboardLayout>
